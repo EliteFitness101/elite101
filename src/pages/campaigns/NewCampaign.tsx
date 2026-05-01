@@ -47,7 +47,7 @@ const NewCampaign = () => {
     const parsed = schema.safeParse(form);
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setLoading(true);
-    const { data, error } = await supabase.from("campaigns").insert({ brand_id: brandId, ...parsed.data }).select().single();
+    const { data, error } = await supabase.from("campaigns").insert({ brand_id: brandId, ...parsed.data } as any).select().single();
     if (error) { toast.error(error.message); setLoading(false); return; }
     // Trigger matching
     const { error: mErr } = await supabase.functions.invoke("match-models", { body: { campaign_id: data.id } });

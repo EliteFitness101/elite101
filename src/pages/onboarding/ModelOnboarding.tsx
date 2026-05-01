@@ -74,9 +74,10 @@ const ModelOnboarding = () => {
     setSubmitting(true);
     try {
       // Insert model row
+      const insertPayload: any = { user_id: user.id, ...parsed.data, tiktok: parsed.data.tiktok || null };
       const { data: model, error: modelErr } = await supabase
         .from("models")
-        .insert({ user_id: user.id, ...parsed.data, tiktok: parsed.data.tiktok || null })
+        .insert(insertPayload)
         .select()
         .single();
       if (modelErr) throw modelErr;

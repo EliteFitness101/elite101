@@ -34,7 +34,7 @@ const BrandOnboarding = () => {
     const parsed = schema.safeParse(form);
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setLoading(true);
-    const { error } = await supabase.from("brands").insert({ user_id: user.id, ...parsed.data });
+    const { error } = await supabase.from("brands").insert({ user_id: user.id, ...parsed.data } as any);
     if (error) toast.error(error.message);
     else {
       toast.success("Brand created!");
