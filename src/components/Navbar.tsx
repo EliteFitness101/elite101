@@ -7,7 +7,7 @@ export const Navbar = () => {
   const { user, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const dashboardPath = roles.includes("admin")
-    ? "/dashboard/brand"
+    ? "/dashboard/admin"
     : roles.includes("brand")
     ? "/dashboard/brand"
     : "/dashboard/model";
