@@ -38,7 +38,6 @@ Deno.test("paystack-webhook rejects bad signature with 401", async () => {
 
 Deno.test({
   name: "paystack-webhook accepts valid signature and marks booking paid",
-  // supabase-js opens a realtime heartbeat interval; disable leak checks.
   sanitizeOps: false,
   sanitizeResources: false,
   async fn() {
@@ -47,35 +46,46 @@ Deno.test({
       return;
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
-      auth: { persistSession: false },
+      auth: { persistSession: false, autoRefreshToken: false },
       realtime: { params: { eventsPerSecond: 0 } },
     });
 
-    // 1. Seed a pending booking with a unique reference (synthetic FKs are fine — no DB FK constraints).
-    const reference = `ELITE_TEST_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
-    const { data: seeded, error: seedErr } = await supabase
-      .from("bookings")
-      .insert({
-        campaign_id: crypto.randomUUID(),
-        model_id: crypto.randomUUID(),
-        brand_id: crypto.randomUUID(),
-        amount_ngn: 50000,
-        commission_ngn: 7500,
-        paystack_ref: reference,
-        status: "pending",
-      })
-      .select()
-      .single();
-    if (seedErr) throw seedErr;
+    // 1. Seed a synthetic auth user → brand → model → campaign → pending booking.
+    const stamp = Date.now();
+    const email = `webhook-test-${stamp}@elite.test`;
+    const { data: created, error: uErr } = await supabase.auth.admin.createUser({
+      email, password: crypto.randomUUID(), email_confirm: true,
+    });
+    if (uErr || !created.user) throw uErr ?? new Error("user create failed");
+    const userId = created.user.id;
 
     try {
-      // 2. Build signed payload.
+      const { data: brand, error: bErr } = await supabase
+        .from("brands").insert({ user_id: userId, name: "Test Brand" }).select().single();
+      if (bErr) throw bErr;
+
+      const { data: model, error: mErr } = await supabase
+        .from("models").insert({ user_id: userId, full_name: "Test Model", status: "approved" }).select().single();
+      if (mErr) throw mErr;
+
+      const { data: campaign, error: cErr } = await supabase
+        .from("campaigns").insert({ brand_id: brand.id, title: "Webhook Test Campaign", budget_ngn: 50000 }).select().single();
+      if (cErr) throw cErr;
+
+      const reference = `ELITE_TEST_${stamp}_${crypto.randomUUID().slice(0, 8)}`;
+      const { data: booking, error: bookErr } = await supabase.from("bookings").insert({
+        campaign_id: campaign.id, model_id: model.id, brand_id: brand.id,
+        amount_ngn: 50000, commission_ngn: 7500, paystack_ref: reference, status: "pending",
+      }).select().single();
+      if (bookErr) throw bookErr;
+
+      // 2. Sign sample payload with the live Paystack secret.
       const sample = JSON.parse(await Deno.readTextFile(new URL("./sample-payload.json", import.meta.url)));
       sample.data.reference = reference;
       const body = JSON.stringify(sample);
       const signature = await hmacSha512Hex(PAYSTACK_SECRET, body);
 
-      // 3. POST to the deployed webhook.
+      // 3. POST to deployed webhook.
       const res = await fetch(`${SUPABASE_URL}/functions/v1/paystack-webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-paystack-signature": signature },
@@ -85,16 +95,14 @@ Deno.test({
       console.log(`webhook -> ${res.status} ${text}`);
       assertEquals(res.status, 200);
 
-      // 4. Confirm status flipped to "paid".
+      // 4. Confirm status flipped.
       const { data: after } = await supabase
-        .from("bookings")
-        .select("status")
-        .eq("id", seeded.id)
-        .maybeSingle();
+        .from("bookings").select("status").eq("id", booking.id).maybeSingle();
       assertEquals(after?.status, "paid");
+      console.log(`✅ Booking ${booking.id} flipped pending → paid`);
     } finally {
-      // Cleanup seed row (bookings has no DELETE policy for users, but service role bypasses RLS).
-      await supabase.from("bookings").delete().eq("id", seeded.id);
+      // Cleanup cascades through all FKs.
+      await supabase.auth.admin.deleteUser(userId);
     }
   },
 });
