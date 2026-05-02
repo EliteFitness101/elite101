@@ -1,0 +1,28 @@
+{
+  "event": "charge.success",
+  "data": {
+    "id": 4099260516,
+    "domain": "test",
+    "status": "success",
+    "reference": "ELITE_TEST_REPLACE_ME",
+    "amount": 5000000,
+    "message": null,
+    "gateway_response": "Successful",
+    "paid_at": "2026-05-02T10:00:00.000Z",
+    "created_at": "2026-05-02T10:00:00.000Z",
+    "channel": "card",
+    "currency": "NGN",
+    "ip_address": "100.64.0.1",
+    "metadata": {
+      "sku": "RFX-DG-INT-33D",
+      "campaign_id": "00000000-0000-0000-0000-000000000000",
+      "model_id": "00000000-0000-0000-0000-000000000000",
+      "brand_id": "00000000-0000-0000-0000-000000000000"
+    },
+    "customer": {
+      "id": 1,
+      "email": "test@elite.resofit.fit",
+      "customer_code": "CUS_test"
+    }
+  }
+}
