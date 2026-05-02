@@ -36,47 +36,65 @@ Deno.test("paystack-webhook rejects bad signature with 401", async () => {
   assertEquals(res.status, 401);
 });
 
-Deno.test("paystack-webhook accepts valid signature and marks booking paid", async () => {
-  if (!PAYSTACK_SECRET || !SERVICE_ROLE) {
-    console.warn("Skipping: PAYSTACK_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY missing");
-    return;
-  }
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+Deno.test({
+  name: "paystack-webhook accepts valid signature and marks booking paid",
+  // supabase-js opens a realtime heartbeat interval; disable leak checks.
+  sanitizeOps: false,
+  sanitizeResources: false,
+  async fn() {
+    if (!PAYSTACK_SECRET || !SERVICE_ROLE) {
+      console.warn("Skipping: PAYSTACK_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY missing");
+      return;
+    }
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
+      auth: { persistSession: false },
+      realtime: { params: { eventsPerSecond: 0 } },
+    });
 
-  // 1. Pick any existing pending booking, or skip if none.
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("id, paystack_ref, status")
-    .eq("status", "pending")
-    .limit(1)
-    .maybeSingle();
+    // 1. Seed a pending booking with a unique reference (synthetic FKs are fine — no DB FK constraints).
+    const reference = `ELITE_TEST_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    const { data: seeded, error: seedErr } = await supabase
+      .from("bookings")
+      .insert({
+        campaign_id: crypto.randomUUID(),
+        model_id: crypto.randomUUID(),
+        brand_id: crypto.randomUUID(),
+        amount_ngn: 50000,
+        commission_ngn: 7500,
+        paystack_ref: reference,
+        status: "pending",
+      })
+      .select()
+      .single();
+    if (seedErr) throw seedErr;
 
-  if (!booking?.paystack_ref) {
-    console.warn("Skipping: no pending booking to test against. Create one via the app first.");
-    return;
-  }
+    try {
+      // 2. Build signed payload.
+      const sample = JSON.parse(await Deno.readTextFile(new URL("./sample-payload.json", import.meta.url)));
+      sample.data.reference = reference;
+      const body = JSON.stringify(sample);
+      const signature = await hmacSha512Hex(PAYSTACK_SECRET, body);
 
-  // 2. Build payload using the real reference.
-  const sample = JSON.parse(await Deno.readTextFile(new URL("./sample-payload.json", import.meta.url)));
-  sample.data.reference = booking.paystack_ref;
-  const body = JSON.stringify(sample);
-  const signature = await hmacSha512Hex(PAYSTACK_SECRET, body);
+      // 3. POST to the deployed webhook.
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/paystack-webhook`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-paystack-signature": signature },
+        body,
+      });
+      const text = await res.text();
+      console.log(`webhook -> ${res.status} ${text}`);
+      assertEquals(res.status, 200);
 
-  // 3. POST to the deployed webhook.
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/paystack-webhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-paystack-signature": signature },
-    body,
-  });
-  const text = await res.text();
-  console.log(`webhook -> ${res.status} ${text}`);
-  assertEquals(res.status, 200);
-
-  // 4. Re-read the booking and confirm status flipped.
-  const { data: after } = await supabase
-    .from("bookings")
-    .select("status")
-    .eq("id", booking.id)
-    .maybeSingle();
-  assertEquals(after?.status, "paid");
+      // 4. Confirm status flipped to "paid".
+      const { data: after } = await supabase
+        .from("bookings")
+        .select("status")
+        .eq("id", seeded.id)
+        .maybeSingle();
+      assertEquals(after?.status, "paid");
+    } finally {
+      // Cleanup seed row (bookings has no DELETE policy for users, but service role bypasses RLS).
+      await supabase.from("bookings").delete().eq("id", seeded.id);
+    }
+  },
 });
