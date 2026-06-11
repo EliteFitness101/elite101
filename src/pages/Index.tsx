@@ -20,7 +20,7 @@ const Index = () => {
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-8">
             <Sparkles className="h-3.5 w-3.5 text-gold" />
             <span className="text-xs tracking-wider uppercase text-muted-foreground">
-              AI-Powered • Made for Africa
+              ResoFlex™ Powered • Made for Africa
             </span>
           </div>
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl leading-[0.95] mb-6">
