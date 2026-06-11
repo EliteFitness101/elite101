@@ -95,7 +95,7 @@ const Index = () => {
       <section className="container py-16">
         <div className="text-center mb-12">
           <div className="text-xs uppercase tracking-[0.3em] text-neon mb-3">Talent Tiers</div>
-          <h2 className="font-display text-4xl">Four categories. One AI engine.</h2>
+          <h2 className="font-display text-4xl">Four categories. One ResoFlex™ engine.</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
