@@ -143,7 +143,7 @@ const CampaignMatches = () => {
                     <div className="text-xs text-muted-foreground space-y-0.5">
                       <div>Category fit: <span className="text-foreground">+{bd.category_fit ?? 0}</span></div>
                       <div>Location: <span className="text-foreground">+{bd.location ?? 0}</span></div>
-                      <div>AI score: <span className="text-foreground">+{bd.ai_score ?? 0}</span></div>
+                      <div>ResoFlex™ score: <span className="text-foreground">+{bd.ai_score ?? 0}</span></div>
                     </div>
                     <Button
                       onClick={() => book(model.id)}
