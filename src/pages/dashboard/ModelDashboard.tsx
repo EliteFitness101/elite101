@@ -108,14 +108,14 @@ const ModelDashboard = () => {
             </div>
           </div>
           <Button onClick={reScore} disabled={rescoring} variant="outline" className="border-gold/40">
-            {rescoring ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scoring...</> : <><RefreshCw className="mr-2 h-4 w-4" />Re-run AI score</>}
+            {rescoring ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scoring...</> : <><RefreshCw className="mr-2 h-4 w-4" />Re-run ResoFlex™ score</>}
           </Button>
         </div>
 
         {/* Score card */}
         <div className="grid md:grid-cols-3 gap-4">
           <div className="glass-strong rounded-3xl p-8 text-center md:col-span-1">
-            <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">AI Score</div>
+            <div className="text-xs uppercase tracking-[0.3em] text-muted-foreground mb-2">ResoFlex™ Score</div>
             <div className="relative inline-flex items-center justify-center my-4">
               <svg className="h-40 w-40 -rotate-90">
                 <circle cx="80" cy="80" r="70" stroke="hsl(var(--muted))" strokeWidth="8" fill="none" />
@@ -140,7 +140,7 @@ const ModelDashboard = () => {
           </div>
 
           <div className="glass-strong rounded-3xl p-6 md:col-span-2 space-y-4">
-            <h3 className="font-display text-xl flex items-center gap-2"><Sparkles className="h-5 w-5 text-gold" />AI insights</h3>
+            <h3 className="font-display text-xl flex items-center gap-2"><Sparkles className="h-5 w-5 text-gold" />ResoFlex™ insights</h3>
             {model.ai_reasoning ? (
               <>
                 <p className="text-sm text-muted-foreground">{model.ai_reasoning}</p>
@@ -164,7 +164,7 @@ const ModelDashboard = () => {
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">No AI analysis yet. Click "Re-run AI score" to generate.</p>
+              <p className="text-sm text-muted-foreground">No ResoFlex™ analysis yet. Click "Re-run ResoFlex™ score" to generate.</p>
             )}
           </div>
         </div>
