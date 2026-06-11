@@ -73,7 +73,7 @@ const Index = () => {
         <div className="grid md:grid-cols-5 gap-4">
           {[
             { icon: Crown, title: "Apply", desc: "Models upload photos, bio, IG handle." },
-            { icon: Brain, title: "AI Scout", desc: "Vision AI scores 0–100 and assigns category." },
+            { icon: Brain, title: "ResoFlex™ Scout", desc: "Vision engine scores 0–100 and assigns category." },
             { icon: Target, title: "Match", desc: "Brands get ranked talent for each campaign." },
             { icon: Calendar, title: "Book", desc: "One-click booking with instant confirmation." },
             { icon: CreditCard, title: "Pay", desc: "Secure Paystack checkout. Models get paid." },
