@@ -73,6 +73,13 @@ export type Database = {
             referencedRelation: "models"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bookings_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       brands: {
@@ -204,6 +211,13 @@ export type Database = {
             referencedRelation: "models"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "matches_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       model_photos: {
@@ -234,6 +248,13 @@ export type Database = {
             columns: ["model_id"]
             isOneToOne: false
             referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "model_photos_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models_public"
             referencedColumns: ["id"]
           },
         ]
@@ -357,7 +378,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      models_public: {
+        Row: {
+          age: number | null
+          bio: string | null
+          category: Database["public"]["Enums"]["model_category"] | null
+          city: string | null
+          created_at: string | null
+          full_name: string | null
+          gender: string | null
+          id: string | null
+          ig_followers: number | null
+          instagram: string | null
+          score: number | null
+          state: string | null
+          status: Database["public"]["Enums"]["model_status"] | null
+          tiktok: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          age?: number | null
+          bio?: string | null
+          category?: Database["public"]["Enums"]["model_category"] | null
+          city?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string | null
+          ig_followers?: number | null
+          instagram?: string | null
+          score?: number | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["model_status"] | null
+          tiktok?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          age?: number | null
+          bio?: string | null
+          category?: Database["public"]["Enums"]["model_category"] | null
+          city?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          gender?: string | null
+          id?: string | null
+          ig_followers?: number | null
+          instagram?: string | null
+          score?: number | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["model_status"] | null
+          tiktok?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
