@@ -15,10 +15,9 @@ const Marketplace = () => {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("models")
-        .select("id, full_name, city, score, category, model_photos(storage_path)")
-        .eq("status", "approved")
+      const { data } = await (supabase as any)
+        .from("models_public")
+        .select("id, full_name, city, score, category, model_photos:model_photos!model_photos_model_id_fkey(storage_path)")
         .order("score", { ascending: false, nullsFirst: false });
       const enriched = await Promise.all(
         (data ?? []).map(async (m: any) => {
