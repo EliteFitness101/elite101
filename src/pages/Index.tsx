@@ -47,7 +47,7 @@ const Index = () => {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-20">
             {[
-              { value: "AI", label: "Vision Scoring" },
+              { value: "ResoFlex™", label: "Vision Scoring" },
               { value: "24h", label: "Avg Booking Time" },
               { value: "100%", label: "Secure Payments" },
             ].map((s) => (
