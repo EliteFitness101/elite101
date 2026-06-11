@@ -150,7 +150,7 @@ const Index = () => {
             Ready to be <span className="text-gradient-gold">discovered?</span>
           </h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Join the next generation of African talent. Free to apply, AI-scored in minutes.
+            Join the next generation of African talent. Free to apply, ResoFlex™ scored in minutes.
           </p>
           <Button asChild size="lg" className="bg-gold text-primary-foreground hover:opacity-90 glow-gold h-12 px-10">
             <Link to="/auth?role=model">Start your application <ArrowRight className="ml-2 h-4 w-4" /></Link>
