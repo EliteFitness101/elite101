@@ -107,7 +107,7 @@ const ModelOnboarding = () => {
       if (scoreErr) {
         // non-fatal — user can re-trigger from dashboard
         console.error("Scoring failed:", scoreErr);
-        toast.warning("Profile saved. AI scoring will be retried — visit your dashboard to re-trigger.");
+        toast.warning("Profile saved. ResoFlex™ scoring will be retried — visit your dashboard to re-trigger.");
       } else {
         toast.success("Profile created and scored!");
       }
