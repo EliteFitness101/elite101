@@ -66,12 +66,6 @@ const ModelProfile = () => {
               <p className="text-sm">{model.bio}</p>
             </div>
           )}
-          {model.ai_reasoning && (
-            <div className="glass rounded-2xl p-4">
-              <div className="text-xs uppercase tracking-wider text-neon mb-2">AI insights</div>
-              <p className="text-sm text-muted-foreground">{model.ai_reasoning}</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
