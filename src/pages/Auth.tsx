@@ -103,7 +103,7 @@ const Auth = () => {
       <div className="w-full max-w-md glass-strong rounded-3xl p-8">
         <h1 className="font-display text-3xl text-center mb-2">Welcome</h1>
         <p className="text-center text-muted-foreground text-sm mb-6">
-          Africa's AI modeling marketplace
+          Africa's ResoFlex™ Powered modeling marketplace
         </p>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "signup" | "signin")}>
