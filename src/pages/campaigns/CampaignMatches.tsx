@@ -24,19 +24,28 @@ const CampaignMatches = () => {
     setCampaign(c);
     const { data: m } = await supabase
       .from("matches")
-      .select("*, models(*, model_photos(storage_path))")
+      .select("*")
       .eq("campaign_id", id)
       .order("total_score", { ascending: false });
-    // Sign first photo of each
+    const modelIds = (m ?? []).map((r: any) => r.model_id);
+    const { data: modelRows } = modelIds.length
+      ? await (supabase as any).from("models_public").select("id, full_name, city, category").in("id", modelIds)
+      : { data: [] as any[] };
+    const { data: photos } = modelIds.length
+      ? await supabase.from("model_photos").select("model_id, storage_path, position").in("model_id", modelIds).order("position", { ascending: true })
+      : { data: [] as any[] };
+    const modelMap = new Map((modelRows ?? []).map((r: any) => [r.id, r]));
+    const photoMap = new Map<string, string>();
+    (photos ?? []).forEach((p: any) => { if (!photoMap.has(p.model_id)) photoMap.set(p.model_id, p.storage_path); });
     const enriched = await Promise.all(
       (m ?? []).map(async (row: any) => {
-        const path = row.models?.model_photos?.[0]?.storage_path;
+        const path = photoMap.get(row.model_id);
         let url = "";
         if (path) {
           const { data } = await supabase.storage.from("model-photos").createSignedUrl(path, 3600);
           url = data?.signedUrl ?? "";
         }
-        return { ...row, photoUrl: url };
+        return { ...row, models: modelMap.get(row.model_id), photoUrl: url };
       })
     );
     setMatches(enriched);
@@ -108,6 +117,7 @@ const CampaignMatches = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {matches.map((m) => {
               const model = m.models;
+              if (!model) return null;
               const bd = m.breakdown || {};
               return (
                 <div key={m.id} className="glass-strong rounded-2xl overflow-hidden hover:border-gold transition">

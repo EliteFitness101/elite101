@@ -15,14 +15,19 @@ const Marketplace = () => {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("models")
-        .select("id, full_name, city, score, category, model_photos(storage_path)")
-        .eq("status", "approved")
+      const { data } = await (supabase as any)
+        .from("models_public")
+        .select("id, full_name, city, score, category")
         .order("score", { ascending: false, nullsFirst: false });
+      const ids = (data ?? []).map((m: any) => m.id);
+      const { data: photos } = ids.length
+        ? await supabase.from("model_photos").select("model_id, storage_path, position").in("model_id", ids).order("position", { ascending: true })
+        : { data: [] as any[] };
+      const photoByModel = new Map<string, string>();
+      (photos ?? []).forEach((p: any) => { if (!photoByModel.has(p.model_id)) photoByModel.set(p.model_id, p.storage_path); });
       const enriched = await Promise.all(
         (data ?? []).map(async (m: any) => {
-          const path = m.model_photos?.[0]?.storage_path;
+          const path = photoByModel.get(m.id);
           let url = "";
           if (path) {
             const { data: s } = await supabase.storage.from("model-photos").createSignedUrl(path, 3600);
