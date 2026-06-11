@@ -120,7 +120,7 @@ const Index = () => {
             {
               icon: Brain,
               title: "Smarter discovery",
-              desc: "Our vision AI scores photos, bio, and IG signals to surface the right talent — not the loudest.",
+              desc: "Our ResoFlex™ vision engine scores photos, bio, and IG signals to surface the right talent — not the loudest.",
             },
             {
               icon: Zap,
