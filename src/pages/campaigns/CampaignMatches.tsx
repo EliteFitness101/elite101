@@ -117,6 +117,7 @@ const CampaignMatches = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {matches.map((m) => {
               const model = m.models;
+              if (!model) return null;
               const bd = m.breakdown || {};
               return (
                 <div key={m.id} className="glass-strong rounded-2xl overflow-hidden hover:border-gold transition">
