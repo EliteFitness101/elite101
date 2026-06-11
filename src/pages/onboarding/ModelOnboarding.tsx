@@ -107,7 +107,7 @@ const ModelOnboarding = () => {
       if (scoreErr) {
         // non-fatal — user can re-trigger from dashboard
         console.error("Scoring failed:", scoreErr);
-        toast.warning("Profile saved. AI scoring will be retried — visit your dashboard to re-trigger.");
+        toast.warning("Profile saved. ResoFlex™ scoring will be retried — visit your dashboard to re-trigger.");
       } else {
         toast.success("Profile created and scored!");
       }
@@ -240,7 +240,7 @@ const ModelOnboarding = () => {
             ) : (
               <Button onClick={onSubmit} disabled={submitting} className="flex-1 bg-gold text-primary-foreground hover:opacity-90 glow-gold">
                 {scoring ? (
-                  <><Sparkles className="mr-2 h-4 w-4 animate-pulse" /> AI scoring you...</>
+                  <><Sparkles className="mr-2 h-4 w-4 animate-pulse" /> ResoFlex™ scoring you...</>
                 ) : submitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
                 ) : (
