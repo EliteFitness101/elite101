@@ -1,5 +1,5 @@
-// AI scoring for a model: fetch profile + photos, scrape Instagram via Firecrawl,
-// call Lovable AI Gateway with vision + tool-calling for structured JSON.
+// ResoFlex™ Powered scoring for a model: fetch profile + photos, scrape Instagram via Firecrawl,
+// call Lovable AI Gateway (ResoFlex™ Powered) with vision + tool-calling for structured JSON.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -114,7 +114,7 @@ Score this model for the Nigerian fashion/beauty/influencer market. Consider pho
           {
             role: "system",
             content:
-              "You are an expert modeling scout for the Nigerian market (fashion, beauty, influencer). " +
+              "You are an expert ResoFlex™ Powered modeling scout for the Nigerian market (Elite NG) (fashion, beauty, influencer). " +
               "Categories: Platinum (top editorial/high fashion 85-100), Commercial (versatile brand work 65-84), " +
               "Influencer (social-first creators 55-79), Training (emerging talent 30-64). Be honest but constructive.",
           },
@@ -125,7 +125,7 @@ Score this model for the Nigerian fashion/beauty/influencer market. Consider pho
             type: "function",
             function: {
               name: "score_model",
-              description: "Return the model's AI score and category.",
+              description: "Return the model's ResoFlex™ score and category.",
               parameters: {
                 type: "object",
                 properties: {
@@ -153,11 +153,11 @@ Score this model for the Nigerian fashion/beauty/influencer market. Consider pho
         });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Top up in Lovable workspace." }), {
+        return new Response(JSON.stringify({ error: "ResoFlex™ credits exhausted. Top up in Lovable workspace." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error ${aiRes.status}: ${txt}`);
+      throw new Error(`ResoFlex™ gateway error ${aiRes.status}: ${txt}`);
     }
 
     const aiData = await aiRes.json();
