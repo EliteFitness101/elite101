@@ -1,5 +1,5 @@
-// Paystack webhook — verifies HMAC signature and processes charge.success events.
-// Public endpoint (no JWT) — security is enforced via Paystack's x-paystack-signature.
+// Paystack webhook — verifies HMAC signature, updates booking, forwards to Make.com,
+// and sends a Telegram notification. Public endpoint (no JWT); security via x-paystack-signature.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -7,20 +7,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-paystack-signature",
 };
 
-// HMAC-SHA512 using Web Crypto (Deno-native — no Node shim).
+const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/p0c26asklninfrxhp2sw6nkdjjb19a89";
+const TELEGRAM_GATEWAY = "https://connector-gateway.lovable.dev/telegram";
+
 async function hmacSha512Hex(secret: string, message: string): Promise<string> {
   const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-512" },
-    false,
-    ["sign"],
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-512" }, false, ["sign"],
   );
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Constant-time string compare.
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -47,9 +45,13 @@ Deno.serve(async (req) => {
     const event = JSON.parse(body);
     console.log(`[ResoFlex] paystack event: ${event.event}`);
 
+    // Forward verified event to Make.com (fire-and-forget; don't block Paystack response).
+    forwardToMake(body).catch((e) => console.error("make.com forward error:", e));
+
     if (event.event === "charge.success") {
-      const { email, reference, metadata } = event.data ?? {};
+      const { email, reference, amount, metadata } = event.data ?? {};
       const sku = metadata?.sku || "RFX-DG-INT-33D";
+      const amountNgn = amount ? amount / 100 : 0;
       console.log(`[ResoFlex] Payment Verified for: ${email} | ref: ${reference} | SKU: ${sku}`);
 
       const supabase = createClient(
@@ -57,31 +59,65 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       );
 
-      // Mark booking paid (idempotent — webhook may arrive before/after the success-page verify).
       if (reference) {
         const { data: booking, error } = await supabase
-          .from("bookings")
-          .update({ status: "paid" })
-          .eq("paystack_ref", reference)
-          .select()
-          .maybeSingle();
+          .from("bookings").update({ status: "paid" })
+          .eq("paystack_ref", reference).select().maybeSingle();
         if (error) console.error("booking update error:", error);
-        else if (booking) await triggerInitiationBot(email, sku, booking);
-        else console.warn(`No booking found for ref ${reference}`);
+        else if (booking) await triggerInitiationBot(email, sku, booking, amountNgn);
+        else {
+          console.warn(`No booking found for ref ${reference} — sending generic Telegram alert`);
+          await sendTelegram(`💸 <b>Paystack payment</b>\nRef: <code>${reference}</code>\nAmount: ₦${amountNgn.toLocaleString()}\nEmail: ${email}\nSKU: ${sku}\n(no matching booking)`);
+        }
       }
     }
 
     return new Response("Success", { status: 200, headers: corsHeaders });
   } catch (e) {
     console.error("paystack-webhook error:", e);
-    // Still 200 so Paystack doesn't endlessly retry on our bugs; logs capture the failure.
     return new Response("Error logged", { status: 200, headers: corsHeaders });
   }
 });
 
-// Stub: connect a Telegram bot (or email provider) here to send the D01 Initiation message.
-async function triggerInitiationBot(email: string, sku: string, booking: any) {
-  console.log(`[ResoFlex] TODO triggerInitiationBot — email=${email} sku=${sku} booking=${booking.id}`);
-  // Example (once a Telegram bot is connected):
-  // await fetch("https://connector-gateway.lovable.dev/telegram/sendMessage", { ... });
+async function forwardToMake(rawBody: string) {
+  const res = await fetch(MAKE_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: rawBody,
+  });
+  console.log(`[ResoFlex] make.com -> ${res.status}`);
+  await res.text();
+}
+
+async function sendTelegram(text: string) {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
+  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
+  if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY || !chatId) {
+    console.warn("Telegram not fully configured — skipping notification");
+    return;
+  }
+  const res = await fetch(`${TELEGRAM_GATEWAY}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+      "X-Connection-Api-Key": TELEGRAM_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
+  });
+  const txt = await res.text();
+  if (!res.ok) console.error(`telegram send failed [${res.status}]: ${txt}`);
+}
+
+async function triggerInitiationBot(email: string, sku: string, booking: any, amountNgn: number) {
+  const msg =
+    `✅ <b>Booking Paid</b>\n` +
+    `Booking: <code>${booking.id}</code>\n` +
+    `Amount: ₦${amountNgn.toLocaleString()}\n` +
+    `Commission: ₦${Number(booking.commission_ngn ?? 0).toLocaleString()}\n` +
+    `SKU: ${sku}\n` +
+    `Buyer: ${email}\n` +
+    `Ref: <code>${booking.paystack_ref}</code>`;
+  await sendTelegram(msg);
 }
