@@ -14,17 +14,20 @@ const ModelProfile = () => {
   useEffect(() => {
     (async () => {
       if (!id) return;
-      const { data } = await supabase.from("models").select("*, model_photos(storage_path, position)").eq("id", id).maybeSingle();
+      const { data } = await (supabase as any).from("models_public").select("*").eq("id", id).maybeSingle();
       setModel(data);
-      if (data?.model_photos?.length) {
-        const sorted = [...data.model_photos].sort((a: any, b: any) => a.position - b.position);
-        const urls = await Promise.all(
-          sorted.map(async (p: any) => {
-            const { data: s } = await supabase.storage.from("model-photos").createSignedUrl(p.storage_path, 3600);
-            return s?.signedUrl ?? "";
-          })
-        );
-        setPhotos(urls.filter(Boolean));
+      if (data) {
+        const { data: ph } = await supabase
+          .from("model_photos").select("storage_path, position").eq("model_id", id).order("position", { ascending: true });
+        if (ph?.length) {
+          const urls = await Promise.all(
+            ph.map(async (p: any) => {
+              const { data: s } = await supabase.storage.from("model-photos").createSignedUrl(p.storage_path, 3600);
+              return s?.signedUrl ?? "";
+            })
+          );
+          setPhotos(urls.filter(Boolean));
+        }
       }
       setLoading(false);
     })();
