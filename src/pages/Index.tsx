@@ -67,7 +67,7 @@ const Index = () => {
         <div className="text-center mb-16">
           <div className="text-xs uppercase tracking-[0.3em] text-gold mb-3">The Workflow</div>
           <h2 className="font-display text-4xl md:text-5xl">
-            Model → AI Score → Match → Booking → Payment
+            Model → ResoFlex™ Score → Match → Booking → Payment
           </h2>
         </div>
         <div className="grid md:grid-cols-5 gap-4">
