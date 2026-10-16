@@ -19,6 +19,12 @@ const BrandOnboarding = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", industry: "Fashion", city: "Lagos" });
+  const [careerChoices, setCareerChoices] = useState("");
+  const [personalGoals, setPersonalGoals] = useState("");
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [socialUrls, setSocialUrls] = useState({ instagram: "", tiktok: "", youtube: "", facebook: "", pinterest: "", x: "", linkedin: "", google: "" });
+  const [socialReviewConsent, setSocialReviewConsent] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -64,6 +70,28 @@ const BrandOnboarding = () => {
             <Label>City</Label>
             <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
           </div>
+          <div>
+            <Label>Career / growth interests (comma-separated)</Label>
+            <Input value={careerChoices} onChange={(e) => setCareerChoices(e.target.value)} placeholder="Brand partnerships, creator campaigns, retail..." />
+          </div>
+          <div>
+            <Label>Business and personal goals (one per line)</Label>
+            <textarea className="flex min-h-[88px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={personalGoals} onChange={(e) => setPersonalGoals(e.target.value)} placeholder="Enter goals ChatB2K should use for recommendations" />
+          </div>
+          <div>
+            <Label>Website / portfolio URL</Label>
+            <Input type="url" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://..." />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(["instagram","tiktok","youtube","facebook","pinterest","x","linkedin","google"] as const).map((platform) => (
+              <div key={platform}>
+                <Label>{platform === "x" ? "X" : platform.charAt(0).toUpperCase() + platform.slice(1)} profile URL</Label>
+                <Input type="url" value={socialUrls[platform]} onChange={(e) => setSocialUrls({ ...socialUrls, [platform]: e.target.value })} placeholder="https://..." />
+              </div>
+            ))}
+          </div>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={socialReviewConsent} onChange={(e) => setSocialReviewConsent(e.target.checked)} className="mt-1" /><span>I consent to ChatB2K reviewing the public links I provide. This does not grant account access or verify identity.</span></label>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} className="mt-1" /><span>I agree to receive onboarding and business follow-up messages on WhatsApp. I can withdraw consent at any time.</span></label>
           <Button type="submit" disabled={loading} className="w-full bg-neon text-accent-foreground hover:opacity-90 glow-neon">
             {loading ? "Creating..." : "Create brand"}
           </Button>
