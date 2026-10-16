@@ -40,10 +40,31 @@ const BrandOnboarding = () => {
     const parsed = schema.safeParse(form);
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setLoading(true);
-    const { error } = await supabase.from("brands").insert({ user_id: user.id, ...parsed.data } as any);
+    const { data: brand, error } = await supabase.from("brands").insert({ user_id: user.id, ...parsed.data } as any).select("id").single();
     if (error) toast.error(error.message);
     else {
-      toast.success("Brand created!");
+      const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
+        body: {
+          profile_type: "brand",
+          source_id: brand.id,
+          profile: {
+            display_name: parsed.data.name,
+            email: user.email,
+            industry: parsed.data.industry,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            preferred_language: navigator.language || "en",
+            preferred_channels: ["whatsapp", "telegram"],
+            career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
+            goals: personalGoals.split(/\\r?\\n/).map((v) => v.trim()).filter(Boolean),
+            portfolio: { portfolio_url: portfolioUrl || null },
+            whatsapp_opt_in: whatsappOptIn,
+            social_review_consent: socialReviewConsent,
+            social_profiles: Object.entries(socialUrls).map(([platform, url]) => ({ platform, url })).concat([{ platform: "Portfolio", url: portfolioUrl }]).filter((s) => s.url),
+          },
+        },
+      });
+      if (intelligenceError) toast.warning("Brand profile saved. ChatB2K enrichment will retry when its service is available.");
+      else toast.success("Brand created and connected to ChatB2K intelligence.");
       navigate("/dashboard/brand");
     }
     setLoading(false);
