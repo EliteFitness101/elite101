@@ -25,6 +25,9 @@ export const Navbar = () => {
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">
+          <Link to="/live" className="text-sm text-muted-foreground hover:text-foreground transition">
+            Discover
+          </Link>
           <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">
             Marketplace
           </Link>

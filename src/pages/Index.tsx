@@ -92,7 +92,7 @@ const Index = () => {
       </section>
 
       {/* Categories */}
-      <section className="container py-16">
+      <section id="tiers" className="container py-16">
         <div className="text-center mb-12">
           <div className="text-xs uppercase tracking-[0.3em] text-neon mb-3">Talent Tiers</div>
           <h2 className="font-display text-4xl">Four categories. One ResoFlex™ engine.</h2>

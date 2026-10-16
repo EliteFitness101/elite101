@@ -18,6 +18,7 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import NewCampaign from "./pages/campaigns/NewCampaign";
 import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
+import LiveDiscover from "./pages/LiveDiscover";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/live" element={<LiveDiscover />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/models/:id" element={<ModelProfile />} />
