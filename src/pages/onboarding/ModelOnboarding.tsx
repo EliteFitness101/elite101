@@ -130,7 +130,7 @@ const ModelOnboarding = () => {
             display_name: parsed.data.full_name, email: user.email, phone: parsed.data.phone, bio: parsed.data.bio,
             instagram: parsed.data.instagram, tiktok: parsed.data.tiktok,
             career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
-            goals: personalGoals.split("\\n").map((v) => v.trim()).filter(Boolean),
+            goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
             portfolio: { portfolio_url: portfolioUrl || null },
             preferred_language: navigator.language || "en",
             preferred_channels: ["whatsapp", "telegram"],
