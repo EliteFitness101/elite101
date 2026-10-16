@@ -52,12 +52,20 @@ const Auth = () => {
       return;
     }
     setLoading(true);
+    const attributionKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "referral", "referral_code"];
+    const searchParams = new URLSearchParams(window.location.search);
+    const attribution = Object.fromEntries(
+      attributionKeys.flatMap((key) => {
+        const value = searchParams.get(key)?.trim();
+        return value ? [[key, value.slice(0, 200)]] : [];
+      }),
+    );
     const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
-        data: { display_name: parsed.data.displayName, app_role: parsed.data.role },
+        data: { display_name: parsed.data.displayName, app_role: parsed.data.role, ...attribution },
       },
     });
     if (error) {
@@ -165,12 +173,12 @@ const Auth = () => {
               <Label>New password</Label>
               <div className="relative">
                 <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" required />
-                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <button type="button" aria-label={showPassword ? "Hide password" : "Show password"} onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
-            <Button type="submit" disabled={loading} className="w-full bg-gold text-primary-foreground">{loading ? "Updating..." : "Update password"}</Button>
+            <Button type="submit" disabled={loading} className="min-h-12 w-full bg-gold text-primary-foreground">{loading ? "Updating..." : "Update password"}</Button>
           </form>
         ) : (
         <Tabs value={tab} onValueChange={(v) => setTab(v as "signup" | "signin")}>
@@ -214,7 +222,7 @@ const Auth = () => {
                   </button>
                 </div>
               </div>
-              <Button type="submit" disabled={loading} className="w-full bg-gold text-primary-foreground hover:opacity-90 glow-gold">
+              <Button type="submit" disabled={loading} className="min-h-12 w-full bg-gold text-primary-foreground hover:opacity-90 glow-gold">
                 {loading ? "Creating..." : `Create ${role} account`}
               </Button>
             </form>
@@ -235,14 +243,14 @@ const Auth = () => {
                   </button>
                 </div>
               </div>
-              <Button type="submit" disabled={loading} className="w-full bg-gold text-primary-foreground hover:opacity-90">
+              <Button type="submit" disabled={loading} className="min-h-12 w-full bg-gold text-primary-foreground hover:opacity-90">
                 {loading ? "Signing in..." : "Sign in"}
               </Button>
               <div className="flex items-center justify-between text-sm">
-                <button type="button" onClick={onForgotPassword} disabled={loading || resetRequested} className="text-gold underline-offset-4 hover:underline disabled:opacity-60">
+                <button type="button" onClick={onForgotPassword} disabled={loading || resetRequested} className="min-h-11 rounded-md px-2 text-gold underline-offset-4 hover:underline disabled:opacity-60">
                   {resetRequested ? "Reset link requested" : "Forgot password?"}
                 </button>
-                <button type="button" onClick={() => { setTab("signup"); setResetRequested(false); }} className="text-muted-foreground hover:text-foreground">Create account</button>
+                <button type="button" onClick={() => { setTab("signup"); setResetRequested(false); }} className="min-h-11 rounded-md px-2 text-muted-foreground hover:text-foreground">Create account</button>
               </div>
             </form>
           </TabsContent>
