@@ -61,9 +61,9 @@ async function enrichWithAI(input: Record<string, unknown>) {
       console.error("OpenAI enrichment unavailable", r.status);
     } catch (e) { console.error("OpenAI enrichment request failed; trying Gemini", String(e).slice(0, 200)); }
   }
-  const geminiKey = (await runtimeSecret("GEMINI_AUTOMATION_API_KEY")) || (await runtimeSecret("GEMINI_API_KEY"));
+  const geminiKey = (await runtimeSecret("GEMINI_API_KEY")) || (await runtimeSecret("GEMINI_AUTOMATION_API_KEY"));
   if (geminiKey) {
-    const model = (await runtimeSecret("GEMINI_MODEL")) || "gemini-3.7-flash";
+    const model = (await runtimeSecret("GEMINI_MODEL")) || "gemini-3.1-flash-lite";
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
@@ -153,13 +153,50 @@ async function processPendingOnboarding() {
   return { processed: results.length, results };
 }
 
+async function processPendingWelcomeEvents() {
+  const now = new Date();
+  const retryCutoff = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
+  const { data: due, error } = await db.from("chatb2k_talent_events").select("*")
+    .eq("event_type", "TALENT_ONBOARDING_RECEIVED")
+    .lte("next_attempt_at", now.toISOString())
+    .or(`status.eq.queued,and(status.eq.pending_configuration,updated_at.lte.${retryCutoff}),and(status.eq.retry,updated_at.lte.${retryCutoff})`)
+    .order("created_at").limit(50);
+  if (error) throw error;
+  const results: unknown[] = [];
+  for (const event of due || []) {
+    const { data: claimed } = await db.from("chatb2k_talent_events").update({ status: "processing", attempts: Number(event.attempts || 0) + 1 })
+      .eq("id", event.id).in("status", ["queued", "pending_configuration", "retry"]).select("id").maybeSingle();
+    if (!claimed) continue;
+    const { data: profile } = await db.from("chatb2k_talent_profiles").select("*").eq("id", event.profile_id).maybeSingle();
+    if (!profile) {
+      await db.from("chatb2k_talent_events").update({ status: "failed", last_error: "profile_missing" }).eq("id", event.id);
+      results.push({ id: event.id, status: "failed", reason: "profile_missing" });
+      continue;
+    }
+    const outcome = await dispatch(profile, str(obj(event.payload).message_body, 4000) || messageFor(profile), profile.consent || {});
+    const status = outcome.status;
+    const retryAt = status === "sent" ? now.toISOString() : new Date(now.getTime() + 6 * 60 * 60 * 1000).toISOString();
+    await db.from("chatb2k_talent_events").update({
+      status, channel: outcome.channel, provider_response: outcome.provider_response || {}, last_error: outcome.error,
+      next_attempt_at: retryAt, sent_at: status === "sent" ? new Date().toISOString() : null,
+    }).eq("id", event.id).eq("status", "processing");
+    results.push({ id: event.id, status, channel: outcome.channel });
+  }
+  return { processed: results.length, results };
+}
+
 async function processDue() {
   const onboarding = await processPendingOnboarding();
-  const { data: due, error } = await db.from("chatb2k_talent_followups").select("*").eq("status", "queued").lte("due_at", new Date().toISOString()).order("due_at").limit(50);
+  const welcomes = await processPendingWelcomeEvents();
+  const now = new Date();
+  const retryCutoff = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString();
+  const { data: due, error } = await db.from("chatb2k_talent_followups").select("*").lte("due_at", now.toISOString())
+    .or(`status.eq.queued,and(status.eq.pending_configuration,updated_at.lte.${retryCutoff}),and(status.eq.retry,updated_at.lte.${retryCutoff})`)
+    .order("due_at").limit(50);
   if (error) throw error;
   const results = [];
   for (const task of due || []) {
-    const { data: claimed } = await db.from("chatb2k_talent_followups").update({ status: "processing", attempts: Number(task.attempts || 0) + 1 }).eq("id", task.id).eq("status", "queued").select("id").maybeSingle();
+    const { data: claimed } = await db.from("chatb2k_talent_followups").update({ status: "processing", attempts: Number(task.attempts || 0) + 1 }).eq("id", task.id).in("status", ["queued", "pending_configuration", "retry"]).select("id").maybeSingle();
     if (!claimed) continue;
     const { data: profile, error: pe } = await db.from("chatb2k_talent_profiles").select("*").eq("id", task.profile_id).maybeSingle();
     if (pe || !profile) { await db.from("chatb2k_talent_followups").update({ status: "failed", last_error: "profile_missing" }).eq("id", task.id); continue; }
@@ -173,7 +210,7 @@ async function processDue() {
     await db.from("chatb2k_talent_followups").update({ status: nextStatus, channel: outcome.channel, attempts: Number(task.attempts || 0) + 1, last_error: outcome.error, payload: { ...obj(task.payload), last_provider_response: outcome.provider_response }, sent_at: outcome.status === "sent" ? new Date().toISOString() : null }).eq("id", task.id);
     results.push({ id: task.id, status: nextStatus, channel: outcome.channel });
   }
-  return { processed: results.length, results, onboarding };
+  return { processed: results.length, results, onboarding, welcomes };
 }
 
 Deno.serve(async (req) => {
