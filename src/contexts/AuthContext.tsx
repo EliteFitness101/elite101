@@ -22,10 +22,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchRoles = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
+    if (error) {
+      setRoles([]);
+      throw error;
+    }
     setRoles((data ?? []).map((r) => r.role as AppRole));
   };
 
@@ -35,19 +39,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
-        // Defer to avoid deadlock
-        setTimeout(() => fetchRoles(sess.user.id), 0);
+        // Keep protected routes in a loading state until role lookup finishes.
+        setLoading(true);
+        // Defer to avoid deadlock inside Supabase's auth callback.
+        setTimeout(() => {
+          void fetchRoles(sess.user.id)
+            .catch((error) => console.error("Unable to load account roles", error))
+            .finally(() => setLoading(false));
+        }, 0);
       } else {
         setRoles([]);
+        setLoading(false);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session: sess } }) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) fetchRoles(sess.user.id);
-      setLoading(false);
-    });
+    void supabase.auth.getSession()
+      .then(async ({ data: { session: sess } }) => {
+        setSession(sess);
+        setUser(sess?.user ?? null);
+        if (sess?.user) {
+          try {
+            await fetchRoles(sess.user.id);
+          } catch (error) {
+            console.error("Unable to load account roles", error);
+          }
+        } else {
+          setRoles([]);
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to restore authentication session", error);
+        setSession(null);
+        setUser(null);
+        setRoles([]);
+      })
+      .finally(() => setLoading(false));
 
     return () => sub.subscription.unsubscribe();
   }, []);
