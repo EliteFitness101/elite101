@@ -42,6 +42,17 @@ const ModelOnboarding = () => {
     bio: "",
   });
   const [photos, setPhotos] = useState<File[]>([]);
+  const [careerChoices, setCareerChoices] = useState("");
+  const [personalGoals, setPersonalGoals] = useState("");
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [pinterestUrl, setPinterestUrl] = useState("");
+  const [xUrl, setXUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [googleUrl, setGoogleUrl] = useState("");
+  const [socialReviewConsent, setSocialReviewConsent] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
 
   // If already has model profile, go to dashboard
   useEffect(() => {
@@ -110,6 +121,38 @@ const ModelOnboarding = () => {
         toast.warning("Profile saved. ResoFlex™ scoring will be retried — visit your dashboard to re-trigger.");
       } else {
         toast.success("Profile created and scored!");
+      }
+      const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
+        body: {
+          profile_type: "model",
+          source_id: model.id,
+          profile: {
+            display_name: parsed.data.full_name, email: user.email, phone: parsed.data.phone, bio: parsed.data.bio,
+            instagram: parsed.data.instagram, tiktok: parsed.data.tiktok,
+            career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
+            goals: personalGoals.split("\\n").map((v) => v.trim()).filter(Boolean),
+            portfolio: { portfolio_url: portfolioUrl || null },
+            preferred_language: navigator.language || "en",
+            preferred_channels: ["whatsapp", "telegram"],
+            whatsapp_opt_in: whatsappOptIn,
+            social_review_consent: socialReviewConsent,
+            social_profiles: [
+              { platform: "Instagram", handle: parsed.data.instagram },
+              { platform: "TikTok", handle: parsed.data.tiktok },
+              { platform: "YouTube", url: youtubeUrl },
+              { platform: "Facebook", url: facebookUrl },
+              { platform: "Pinterest", url: pinterestUrl },
+              { platform: "X", url: xUrl },
+              { platform: "LinkedIn", url: linkedinUrl },
+              { platform: "Google", url: googleUrl },
+              { platform: "Portfolio", url: portfolioUrl },
+            ].filter((s) => s.handle || s.url),
+          },
+        },
+      });
+      if (intelligenceError) {
+        console.error("ChatB2K profile enrichment pending:", intelligenceError);
+        toast.warning("Your model profile is saved. ChatB2K enrichment will retry when its service is available.");
       }
       navigate("/dashboard/model");
     } catch (e: any) {
@@ -197,6 +240,28 @@ const ModelOnboarding = () => {
                 />
                 <p className="text-xs text-muted-foreground mt-1">{form.bio.length}/800</p>
               </div>
+              <div>
+                <Label>Career interests (comma-separated)</Label>
+                <Input value={careerChoices} onChange={(e) => setCareerChoices(e.target.value)} placeholder="Modeling, acting, brand campaigns, presenting" />
+              </div>
+              <div>
+                <Label>Personal goals (one per line)</Label>
+                <Textarea value={personalGoals} onChange={(e) => setPersonalGoals(e.target.value)} rows={3} placeholder="Build a portfolio, earn from campaigns, develop a personal brand..." />
+              </div>
+              <div>
+                <Label>Portfolio website URL (optional)</Label>
+                <Input type="url" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://..." />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label>YouTube profile URL</Label><Input type="url" value={youtubeUrl} onChange={(e) => setYoutubeUrl(e.target.value)} placeholder="https://youtube.com/@..." /></div>
+                <div><Label>Facebook / Meta profile URL</Label><Input type="url" value={facebookUrl} onChange={(e) => setFacebookUrl(e.target.value)} placeholder="https://facebook.com/..." /></div>
+                <div><Label>Pinterest profile URL</Label><Input type="url" value={pinterestUrl} onChange={(e) => setPinterestUrl(e.target.value)} placeholder="https://pinterest.com/..." /></div>
+                <div><Label>X profile URL</Label><Input type="url" value={xUrl} onChange={(e) => setXUrl(e.target.value)} placeholder="https://x.com/..." /></div>
+                <div><Label>LinkedIn profile URL</Label><Input type="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} placeholder="https://linkedin.com/in/..." /></div>
+                <div><Label>Google / business profile URL</Label><Input type="url" value={googleUrl} onChange={(e) => setGoogleUrl(e.target.value)} placeholder="https://..." /></div>
+              </div>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={socialReviewConsent} onChange={(e) => setSocialReviewConsent(e.target.checked)} className="mt-1" /><span>I consent to ChatB2K reviewing the public profile links I provide to prepare portfolio recommendations. This does not grant account access or prove identity.</span></label>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} className="mt-1" /><span>I agree to receive onboarding and portfolio follow-up messages on WhatsApp. I can withdraw consent at any time.</span></label>
             </>
           )}
           {step === 4 && (
