@@ -55,7 +55,7 @@ const BrandOnboarding = () => {
             preferred_language: navigator.language || "en",
             preferred_channels: ["whatsapp", "telegram"],
             career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
-            goals: personalGoals.split(/\\r?\\n/).map((v) => v.trim()).filter(Boolean),
+            goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
             portfolio: { portfolio_url: portfolioUrl || null },
             whatsapp_opt_in: whatsappOptIn,
             social_review_consent: socialReviewConsent,
