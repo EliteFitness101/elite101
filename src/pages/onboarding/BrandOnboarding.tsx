@@ -25,6 +25,8 @@ const BrandOnboarding = () => {
   const [socialUrls, setSocialUrls] = useState({ instagram: "", tiktok: "", youtube: "", facebook: "", pinterest: "", x: "", linkedin: "", google: "" });
   const [socialReviewConsent, setSocialReviewConsent] = useState(false);
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramOptIn, setTelegramOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -119,6 +121,11 @@ const BrandOnboarding = () => {
           </div>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={socialReviewConsent} onChange={(e) => setSocialReviewConsent(e.target.checked)} className="mt-1" /><span>I consent to ChatB2K reviewing the public links I provide. This does not grant account access or verify identity.</span></label>
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} className="mt-1" /><span>I agree to receive onboarding and business follow-up messages on WhatsApp. I can withdraw consent at any time.</span></label>
+          <div>
+            <Label>Telegram chat ID (optional)</Label>
+            <Input value={telegramChatId} onChange={(e) => setTelegramChatId(e.target.value)} placeholder="Add after you have started our Telegram bot" />
+          </div>
+          <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={telegramOptIn} onChange={(e) => setTelegramOptIn(e.target.checked)} className="mt-1" /><span>I agree to receive onboarding and business follow-up messages from our Telegram bot. I can withdraw consent at any time.</span></label>
           <Button type="submit" disabled={loading} className="w-full bg-neon text-accent-foreground hover:opacity-90 glow-neon">
             {loading ? "Creating..." : "Create brand"}
           </Button>
