@@ -22,7 +22,12 @@ const cleanUrl = (v: unknown) => {
     const host = u.hostname.toLowerCase();
     if (!["https:", "http:"].includes(u.protocol) || u.username || u.password) return "";
     if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal") return "";
-    if (/^(127\\.|10\\.|192\\.168\\.|169\\.254\\.)/.test(host) || /^172\\.(1[6-9]|2[0-9]|3[01])\\./.test(host) || host === "::1" || host.startsWith("fc") || host.startsWith("fd")) return "";
+    const ipv4 = host.split(".").map((part) => Number(part));
+    const privateIPv4 = ipv4.length === 4 && ipv4.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) && (
+      ipv4[0] === 0 || ipv4[0] === 10 || ipv4[0] === 127 || ipv4[0] === 169 && ipv4[1] === 254 ||
+      ipv4[0] === 172 && ipv4[1] >= 16 && ipv4[1] <= 31 || ipv4[0] === 192 && ipv4[1] === 168
+    );
+    if (privateIPv4 || host === "[::1]" || host.startsWith("[fc") || host.startsWith("[fd")) return "";
     return u.toString();
   } catch { return ""; }
 };
@@ -105,7 +110,37 @@ function messageFor(profile: any, followup = false) {
   return `🌟 Welcome to ResoFit / ResoFlex Elite, ${name}! Your ${str(profile.profile_type, 40)} onboarding has been received. ChatB2K is organizing your goals, career preferences, portfolio and public profile links into a personalized next-step plan. Any AI recommendations or social evidence will be labelled as unverified until independently confirmed. Reply with any missing details or preferences to improve your plan.`;
 }
 
+async function processPendingOnboarding() {
+  const { data: pending, error } = await db.from("chatb2k_talent_profiles").select("*").eq("onboarding_status", "received").order("created_at").limit(20);
+  if (error) throw error;
+  const results: unknown[] = [];
+  for (const candidate of pending || []) {
+    const { data: claim } = await db.from("chatb2k_talent_profiles").update({ onboarding_status: "enrichment_pending" }).eq("id", candidate.id).eq("onboarding_status", "received").select("id").maybeSingle();
+    if (!claim) continue;
+    const { user_id: _userId, email: _email, phone: _phone, consent: _consent, source_id: _sourceId, source_table: _sourceTable, ...safeProfile } = candidate;
+    let evidence: any = { provider: "not_requested", evidence: [], status: "consent_not_given" };
+    if (candidate.consent?.social_review === true) evidence = await fetchPublicEvidence(arr(candidate.social_profiles));
+    let ai: any;
+    try { ai = await enrichWithAI({ ...safeProfile, public_source_evidence: evidence }); }
+    catch (e) { ai = { provider: "none", model: null, data: { profile_summary: "Profile saved; AI enrichment needs retry.", career_options: [], goal_plan: [], portfolio_gaps: [], social_profile_assessments: [], follow_up_questions: [], risk_flags: ["ENRICHMENT_REQUEST_FAILED"], recommended_next_actions: ["Retry after checking AI provider configuration."] } }; }
+    const enrichment = { ...obj(ai.data), ai_provider: ai.provider, ai_model: ai.model, public_evidence: evidence, enriched_at: new Date().toISOString(), evidence_policy: "AI recommendations are advisory; social identities remain unverified without official platform OAuth or approved verification." };
+    const { error: updateError } = await db.from("chatb2k_talent_profiles").update({ enrichment, onboarding_status: ai.provider === "none" ? "enrichment_pending" : "enriched" }).eq("id", candidate.id);
+    if (updateError) throw updateError;
+    const { data: event } = await db.from("chatb2k_talent_events").select("*").eq("profile_id", candidate.id).eq("event_type", "TALENT_ONBOARDING_RECEIVED").eq("status", "queued").maybeSingle();
+    if (event) {
+      const { data: eventClaim } = await db.from("chatb2k_talent_events").update({ status: "processing", attempts: Number(event.attempts || 0) + 1 }).eq("id", event.id).eq("status", "queued").select("id").maybeSingle();
+      if (eventClaim) {
+        const outcome = await dispatch(candidate, str(obj(event.payload).message_body, 4000) || messageFor(candidate), candidate.consent || {});
+        await db.from("chatb2k_talent_events").update({ status: outcome.status, channel: outcome.channel, provider_response: outcome.provider_response || {}, last_error: outcome.error, sent_at: outcome.status === "sent" ? new Date().toISOString() : null }).eq("id", event.id).eq("status", "processing");
+      }
+    }
+    results.push({ profile_id: candidate.id, profile_type: candidate.profile_type, ai_provider: ai.provider });
+  }
+  return { processed: results.length, results };
+}
+
 async function processDue() {
+  const onboarding = await processPendingOnboarding();
   const { data: due, error } = await db.from("chatb2k_talent_followups").select("*").eq("status", "queued").lte("due_at", new Date().toISOString()).order("due_at").limit(50);
   if (error) throw error;
   const results = [];
@@ -124,7 +159,7 @@ async function processDue() {
     await db.from("chatb2k_talent_followups").update({ status: nextStatus, channel: outcome.channel, attempts: Number(task.attempts || 0) + 1, last_error: outcome.error, payload: { ...obj(task.payload), last_provider_response: outcome.provider_response }, sent_at: outcome.status === "sent" ? new Date().toISOString() : null }).eq("id", task.id);
     results.push({ id: task.id, status: nextStatus, channel: outcome.channel });
   }
-  return { processed: results.length, results };
+  return { processed: results.length, results, onboarding };
 }
 
 Deno.serve(async (req) => {

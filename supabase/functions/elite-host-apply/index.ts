@@ -8,7 +8,7 @@ async function sha(v:string){const d=await crypto.subtle.digest("SHA-256",new Te
 Deno.serve(async req=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
  if(req.method!=="POST")return json({ok:false,message:"POST required"},405);
- let applicationId:string|null=null;
+ let applicationId:string|null=null; let chatb2kAccepted=false;
  try{
   const b=await req.json(); if(text(b.website,40))return json({ok:true,message:"Application received."});
   const full_name=text(b.full_name,100),email=text(b.email,255).toLowerCase(),phone=text(b.phone,25),age=Number(b.age);
@@ -36,6 +36,6 @@ Deno.serve(async req=>{
    const engineResponse=await fetch(engineUrl,{method:"POST",headers:{"Content-Type":"application/json","apikey":engineKey,"Authorization":"Bearer "+engineKey},body:JSON.stringify({profile_type:"host",source_id:ea.id,profile:{display_name:full_name,email,phone,whatsapp_opt_in,timezone:text(b.timezone,100),preferred_language:text(b.preferred_language,40),preferred_channels:["whatsapp","telegram"],career_choices:[content_category||"BIGO Live hosting"],goals:[text(b.personal_goal,500),text(b.dream_goal,500)].filter(Boolean),bio:experience,social_review_consent:b.social_review_consent===true,social_profiles:[{platform:"BIGO Live",handle:bigo_username||"",url:text(b.bigo_profile_url,1000)},{platform:"TikTok",handle:tiktok||"",url:text(b.tiktok_url,1000)},{platform:"Instagram",handle:instagram||"",url:text(b.instagram_url,1000)}].filter(x=>x.handle||x.url)}})});
    if(!engineResponse.ok)console.error("ChatB2K talent enrichment queued/failed",engineResponse.status,await engineResponse.text().catch(()=> ""));
   }catch(engineError){console.error("ChatB2K talent enrichment unavailable; application preserved",engineError);}
-  return json({ok:true,application_id:ea.id,reference:reference_number,message:"Application received.",chatb2k_status:"accepted_for_processing"});
+  return json({ok:true,application_id:ea.id,reference:reference_number,message:"Application received.",chatb2k_status:chatb2kAccepted?"accepted_for_processing":"retry_required"});
  }catch(e){if(applicationId){await db.from("verification_consents").delete().eq("application_id",applicationId);await db.from("candidate_verifications").delete().eq("application_id",applicationId);await db.from("elite_host_applications").delete().eq("application_id",applicationId);await db.from("applications").delete().eq("id",applicationId);} console.error("elite-host-apply error",e);return json({ok:false,message:"Application could not be submitted."},500);}
 });
