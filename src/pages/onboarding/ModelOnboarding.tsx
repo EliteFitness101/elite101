@@ -138,6 +138,8 @@ const ModelOnboarding = () => {
               preferred_language: navigator.language || "en",
               preferred_channels: ["whatsapp", "telegram"],
               whatsapp_opt_in: whatsappOptIn,
+              telegram_chat_id: telegramChatId.trim(),
+              telegram_opt_in: telegramOptIn,
               social_review_consent: socialReviewConsent,
               social_profiles: [
                 { platform: "Instagram", handle: parsed.data.instagram },
