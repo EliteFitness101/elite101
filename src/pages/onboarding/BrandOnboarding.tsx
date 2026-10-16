@@ -61,6 +61,8 @@ const BrandOnboarding = () => {
               goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
               portfolio: { portfolio_url: portfolioUrl || null },
               whatsapp_opt_in: whatsappOptIn,
+              telegram_chat_id: telegramChatId.trim(),
+              telegram_opt_in: telegramOptIn,
               social_review_consent: socialReviewConsent,
               social_profiles: Object.entries(socialUrls).map(([platform, url]) => ({ platform, url })).concat([{ platform: "Portfolio", url: portfolioUrl }]).filter((s) => s.url),
             },
