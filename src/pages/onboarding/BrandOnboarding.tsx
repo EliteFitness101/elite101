@@ -43,28 +43,34 @@ const BrandOnboarding = () => {
     const { data: brand, error } = await supabase.from("brands").insert({ user_id: user.id, ...parsed.data } as any).select("id").single();
     if (error) toast.error(error.message);
     else {
-      const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
-        body: {
-          profile_type: "brand",
-          source_id: brand.id,
-          profile: {
-            display_name: parsed.data.name,
-            email: user.email,
-            industry: parsed.data.industry,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            preferred_language: navigator.language || "en",
-            preferred_channels: ["whatsapp", "telegram"],
-            career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
-            goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
-            portfolio: { portfolio_url: portfolioUrl || null },
-            whatsapp_opt_in: whatsappOptIn,
-            social_review_consent: socialReviewConsent,
-            social_profiles: Object.entries(socialUrls).map(([platform, url]) => ({ platform, url })).concat([{ platform: "Portfolio", url: portfolioUrl }]).filter((s) => s.url),
+      try {
+        const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
+          body: {
+            profile_type: "brand",
+            source_id: brand.id,
+            profile: {
+              display_name: parsed.data.name,
+              email: user.email,
+              industry: parsed.data.industry,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              preferred_language: navigator.language || "en",
+              preferred_channels: ["whatsapp", "telegram"],
+              career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
+              goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
+              portfolio: { portfolio_url: portfolioUrl || null },
+              whatsapp_opt_in: whatsappOptIn,
+              social_review_consent: socialReviewConsent,
+              social_profiles: Object.entries(socialUrls).map(([platform, url]) => ({ platform, url })).concat([{ platform: "Portfolio", url: portfolioUrl }]).filter((s) => s.url),
+            },
           },
-        },
-      });
-      if (intelligenceError) toast.warning("Brand profile saved. ChatB2K enrichment will retry when its service is available.");
-      else toast.success("Brand created and connected to ChatB2K intelligence.");
+        });
+        if (intelligenceError) toast.warning("Brand profile saved. ChatB2K enrichment will retry when its service is available.");
+        else toast.success("Brand created and connected to ChatB2K intelligence.");
+
+      } catch (intelligenceFailure) {
+        console.error("ChatB2K brand enrichment unavailable:", intelligenceFailure);
+        toast.warning("Brand saved. ChatB2K enrichment will retry when its service is available.");
+      }
       navigate("/dashboard/brand");
     }
     setLoading(false);
