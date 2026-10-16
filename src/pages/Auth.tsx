@@ -38,10 +38,10 @@ const Auth = () => {
   const [resetRequested, setResetRequested] = useState(false);
 
   useEffect(() => {
-    if (user && roles.length > 0) {
+    if (!resetMode && user && roles.length > 0) {
       navigate(roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model", { replace: true });
     }
-  }, [user, roles, navigate]);
+  }, [user, roles, navigate, resetMode]);
 
   const onSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
