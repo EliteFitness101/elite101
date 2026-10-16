@@ -27,7 +27,7 @@ const Auth = () => {
   const initialRole = (params.get("role") === "brand" ? "brand" : "model") as "model" | "brand";
   const { user, roles, refreshRoles } = useAuth();
 
-  const [tab, setTab] = useState<"signup" | "signin">("signup");
+  const [tab, setTab] = useState<"signup" | "signin">(params.get("mode") === "signin" ? "signin" : "signup");
   const [role, setRole] = useState<"model" | "brand">(initialRole);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
