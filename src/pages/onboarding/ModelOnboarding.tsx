@@ -53,6 +53,8 @@ const ModelOnboarding = () => {
   const [googleUrl, setGoogleUrl] = useState("");
   const [socialReviewConsent, setSocialReviewConsent] = useState(false);
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [telegramChatId, setTelegramChatId] = useState("");
+  const [telegramOptIn, setTelegramOptIn] = useState(false);
 
   // If already has model profile, go to dashboard
   useEffect(() => {
@@ -268,6 +270,11 @@ const ModelOnboarding = () => {
               </div>
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={socialReviewConsent} onChange={(e) => setSocialReviewConsent(e.target.checked)} className="mt-1" /><span>I consent to ChatB2K reviewing the public profile links I provide to prepare portfolio recommendations. This does not grant account access or prove identity.</span></label>
               <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={whatsappOptIn} onChange={(e) => setWhatsappOptIn(e.target.checked)} className="mt-1" /><span>I agree to receive onboarding and portfolio follow-up messages on WhatsApp. I can withdraw consent at any time.</span></label>
+              <div>
+                <Label>Telegram chat ID (optional)</Label>
+                <Input value={telegramChatId} onChange={(e) => setTelegramChatId(e.target.value)} placeholder="Add after you have started our Telegram bot" />
+              </div>
+              <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={telegramOptIn} onChange={(e) => setTelegramOptIn(e.target.checked)} className="mt-1" /><span>I agree to receive onboarding and portfolio follow-up messages from our Telegram bot. I can withdraw consent at any time.</span></label>
             </>
           )}
           {step === 4 && (
