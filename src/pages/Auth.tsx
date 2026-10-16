@@ -36,6 +36,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [resetMode, setResetMode] = useState(params.get("mode") === "reset");
   const [resetRequested, setResetRequested] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (!resetMode && user && roles.length > 0) {
@@ -65,6 +66,7 @@ const Auth = () => {
       return;
     }
     if (data.user && !data.session) {
+      setVerificationEmail(parsed.data.email);
       toast.success("Account created. Check your email for a verification link before signing in.");
       setTab("signin");
     } else if (data.user && data.session) {
@@ -141,6 +143,19 @@ const Auth = () => {
         <p className="text-center text-muted-foreground text-sm mb-6">
           Africa's ResoFlex™ Powered modeling marketplace
         </p>
+
+        {verificationEmail && !resetMode && (
+          <div role="status" aria-live="polite" className="mb-6 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
+            <h2 className="mb-1 font-semibold text-foreground">Check your email to verify your account</h2>
+            <p className="text-muted-foreground">
+              We sent a verification link to <strong className="break-all text-foreground">{verificationEmail}</strong>.
+              Open that link before signing in. If it is not in your inbox, check your spam or junk folder.
+            </p>
+            <button type="button" onClick={() => { setTab("signin"); setVerificationEmail(null); }} className="mt-3 text-gold underline underline-offset-4">
+              I have verified my email — continue to sign in
+            </button>
+          </div>
+        )}
 
         {resetMode ? (
           <form onSubmit={onUpdatePassword} className="space-y-4">
