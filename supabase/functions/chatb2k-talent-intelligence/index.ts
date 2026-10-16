@@ -109,7 +109,7 @@ async function dispatch(profile: any, message: string, consent: any) {
     return { status: r.ok ? "sent" : "retry", channel: "whatsapp", provider_response: data, error: r.ok ? null : `whatsapp_http_${r.status}` };
   }
   const telegramToken = Deno.env.get("TELEGRAM_BOT_TOKEN") || (await runtimeSecret("telegram_bot_01_token"));
-  if (chatId && telegramToken) {
+  if (chatId && telegramToken && consent?.telegram_opt_in === true) {
     const r = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: true }) });
     const data = await r.json().catch(() => ({}));
     return { status: r.ok && data.ok ? "sent" : "retry", channel: "telegram", provider_response: data, error: r.ok && data.ok ? null : "telegram_send_failed" };
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
       const val = str(supplied[key] || source[key], 250);
       if (val && !socialProfiles.some((x: any) => x.platform === platform)) socialProfiles.push({ platform, handle: val.replace(/^@/, ""), url: cleanUrl(val), consent_to_public_review: supplied.social_review_consent === true, verification_status: "unverified" });
     }
-    const consent = { whatsapp: supplied.whatsapp_opt_in === true || source.whatsapp_opt_in === true, whatsapp_opt_in: supplied.whatsapp_opt_in === true || source.whatsapp_opt_in === true, social_review: supplied.social_review_consent === true, telegram_chat_id: str(supplied.telegram_chat_id, 80) || null };
+    const consent = { whatsapp: supplied.whatsapp_opt_in === true || source.whatsapp_opt_in === true, whatsapp_opt_in: supplied.whatsapp_opt_in === true || source.whatsapp_opt_in === true, telegram_opt_in: supplied.telegram_opt_in === true || source.telegram_opt_in === true, social_review: supplied.social_review_consent === true, telegram_chat_id: str(supplied.telegram_chat_id, 80) || null };
     const base = {
       profile_type: profileType, source_table: sourceTable, source_id: sourceId, user_id: source.user_id || user?.id || null,
       display_name: displayName, email: str(supplied.email || source.email, 255).toLowerCase() || null, phone: str(supplied.phone || source.phone, 40) || null,
