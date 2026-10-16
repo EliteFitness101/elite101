@@ -122,36 +122,42 @@ const ModelOnboarding = () => {
       } else {
         toast.success("Profile created and scored!");
       }
-      const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
-        body: {
-          profile_type: "model",
-          source_id: model.id,
-          profile: {
-            display_name: parsed.data.full_name, email: user.email, phone: parsed.data.phone, bio: parsed.data.bio,
-            instagram: parsed.data.instagram, tiktok: parsed.data.tiktok,
-            career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
-            goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
-            portfolio: { portfolio_url: portfolioUrl || null },
-            preferred_language: navigator.language || "en",
-            preferred_channels: ["whatsapp", "telegram"],
-            whatsapp_opt_in: whatsappOptIn,
-            social_review_consent: socialReviewConsent,
-            social_profiles: [
-              { platform: "Instagram", handle: parsed.data.instagram },
-              { platform: "TikTok", handle: parsed.data.tiktok },
-              { platform: "YouTube", url: youtubeUrl },
-              { platform: "Facebook", url: facebookUrl },
-              { platform: "Pinterest", url: pinterestUrl },
-              { platform: "X", url: xUrl },
-              { platform: "LinkedIn", url: linkedinUrl },
-              { platform: "Google", url: googleUrl },
-              { platform: "Portfolio", url: portfolioUrl },
-            ].filter((s) => s.handle || s.url),
+      try {
+        const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
+          body: {
+            profile_type: "model",
+            source_id: model.id,
+            profile: {
+              display_name: parsed.data.full_name, email: user.email, phone: parsed.data.phone, bio: parsed.data.bio,
+              instagram: parsed.data.instagram, tiktok: parsed.data.tiktok,
+              career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
+              goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
+              portfolio: { portfolio_url: portfolioUrl || null },
+              preferred_language: navigator.language || "en",
+              preferred_channels: ["whatsapp", "telegram"],
+              whatsapp_opt_in: whatsappOptIn,
+              social_review_consent: socialReviewConsent,
+              social_profiles: [
+                { platform: "Instagram", handle: parsed.data.instagram },
+                { platform: "TikTok", handle: parsed.data.tiktok },
+                { platform: "YouTube", url: youtubeUrl },
+                { platform: "Facebook", url: facebookUrl },
+                { platform: "Pinterest", url: pinterestUrl },
+                { platform: "X", url: xUrl },
+                { platform: "LinkedIn", url: linkedinUrl },
+                { platform: "Google", url: googleUrl },
+                { platform: "Portfolio", url: portfolioUrl },
+              ].filter((s) => s.handle || s.url),
+            },
           },
-        },
-      });
-      if (intelligenceError) {
-        console.error("ChatB2K profile enrichment pending:", intelligenceError);
+        });
+        if (intelligenceError) {
+          console.error("ChatB2K profile enrichment pending:", intelligenceError);
+          toast.warning("Your model profile is saved. ChatB2K enrichment will retry when its service is available.");
+        }
+  
+      } catch (intelligenceFailure) {
+        console.error("ChatB2K profile enrichment unavailable:", intelligenceFailure);
         toast.warning("Your model profile is saved. ChatB2K enrichment will retry when its service is available.");
       }
       navigate("/dashboard/model");
