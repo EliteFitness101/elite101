@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import Pathways from "./pages/Pathways";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Marketplace from "./pages/Marketplace";
@@ -30,6 +31,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/pathways" element={<Pathways />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/models/:id" element={<ModelProfile />} />
