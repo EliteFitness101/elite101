@@ -25,6 +25,18 @@ const Auth = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRole = (params.get("role") === "brand" ? "brand" : "model") as "model" | "brand";
+  const allowedIntents = ["start-earning", "earn-from-home", "work-from-home", "student-support", "soft-loan-enquiry", "become-model", "book-talent"] as const;
+  const requestedIntent = params.get("intent") ?? "become-model";
+  const interestIntent = (allowedIntents as readonly string[]).includes(requestedIntent) ? requestedIntent : "become-model";
+  const intentLabels: Record<string, string> = {
+    "start-earning": "Start earning as a creator",
+    "earn-from-home": "Explore earning from home",
+    "work-from-home": "Explore creator work from home",
+    "student-support": "Student support enquiry",
+    "soft-loan-enquiry": "Soft-loan enquiry",
+    "become-model": "Become a model or creator",
+    "book-talent": "Book talent for a brand",
+  };
   const { user, roles, refreshRoles } = useAuth();
 
   const [tab, setTab] = useState<"signup" | "signin">("signup");
@@ -57,7 +69,7 @@ const Auth = () => {
       password: parsed.data.password,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
-        data: { display_name: parsed.data.displayName, app_role: parsed.data.role },
+        data: { display_name: parsed.data.displayName, app_role: parsed.data.role, interest_intent: interestIntent },
       },
     });
     if (error) {
@@ -141,7 +153,7 @@ const Auth = () => {
       <div className="w-full max-w-md glass-strong rounded-3xl p-8">
         <h1 className="font-display text-3xl text-center mb-2">Welcome</h1>
         <p className="text-center text-muted-foreground text-sm mb-6">
-          Africa's ResoFlex™ Powered modeling marketplace
+          {intentLabels[interestIntent]} · Africa's ResoFlex™ powered talent marketplace
         </p>
 
         {verificationEmail && !resetMode && (
