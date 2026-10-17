@@ -36,7 +36,6 @@ const HeroVideoReel = () => {
     }
     const playback = video.play();
     if (playback) playback.catch(() => setIsPlaying(false));
-    return () => video.pause();
   }, [activeClip, isPlaying, muted, volume]);
 
   const moveClip = (direction: number) => {
