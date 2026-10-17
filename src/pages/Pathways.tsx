@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { ArrowRight, BadgeCheck, BriefcaseBusiness, GraduationCap, Laptop, Radio, ShieldCheck, ShoppingBag, Sparkles, Wallet } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, GraduationCap, Laptop, Radio, ShieldCheck, ShoppingBag, Sparkles, Wallet } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 
@@ -22,7 +22,7 @@ const pathways: Record<string, {
   "start-earning": {
     eyebrow: "CREATOR OPPORTUNITIES", title: "Turn your skills into opportunities.", accent: "On your terms.",
     description: "Start with a creator profile, highlight your strengths, and explore relevant opportunities. Work, selection, and income depend on eligibility, demand, and individual results.",
-    icon: BriefcaseBusiness, benefits: ["Create a profile for discovery", "Explore brand and creator opportunities", "Keep your next step clear from mobile"],
+    icon: Briefcase, benefits: ["Create a profile for discovery", "Explore brand and creator opportunities", "Keep your next step clear from mobile"],
     intent: "start-earning", primary: "Start my profile",
   },
   "earn-from-home": {
