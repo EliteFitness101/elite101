@@ -24,7 +24,7 @@ export const Navbar = () => {
             ELITE <span className="text-gradient-gold">NG</span>
           </span>
         </Link>
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden md:flex items-center gap-4">
           <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">
             Marketplace
           </Link>
@@ -57,6 +57,18 @@ export const Navbar = () => {
             </>
           )}
         </div>
+      </div>
+
+      <div className="border-t border-gold/10">
+        <nav aria-label="Quick paths" className="container flex gap-2 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <a href="https://www.bigo.tv/" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Start BIGO Live ↗</a>
+          <Link to="/auth?role=model" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Start Earning</Link>
+          <Link to="/auth?role=model" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Earn From Home</Link>
+          <Link to="/auth?role=model" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Work From Home</Link>
+          <Link to="/auth?role=model" title="Enquiry only; support eligibility is not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Student Support</Link>
+          <Link to="/auth?role=model" title="Enquiry only; loan availability and approval are not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Soft Loan Enquiry</Link>
+          <a href="https://shop.resofit.fit/" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-neon/30 px-3 py-1.5 text-xs text-neon hover:bg-neon/10">Shop Gadgets ↗</a>
+        </nav>
       </div>
     </header>
   );
