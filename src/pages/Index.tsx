@@ -12,11 +12,15 @@ const Index = () => {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <video autoPlay muted loop playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover opacity-35">
+            <source src="/Creator_filming_travel_content_20261017005213.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-background/65" />
           <div className="absolute top-20 left-1/4 h-96 w-96 rounded-full bg-gold/20 blur-[120px] animate-pulse-glow" />
           <div className="absolute bottom-10 right-1/4 h-96 w-96 rounded-full bg-neon/10 blur-[120px]" />
         </div>
-        <div className="container py-24 md:py-32 text-center">
+        <div className="container relative z-10 py-24 md:py-32 text-center">
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-8">
             <Sparkles className="h-3.5 w-3.5 text-gold" />
             <span className="text-xs tracking-wider uppercase text-muted-foreground">
