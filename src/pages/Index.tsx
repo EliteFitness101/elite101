@@ -55,8 +55,6 @@ const HeroVideoReel = () => {
         playsInline
         preload="metadata"
         onEnded={() => moveClip(1)}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
         className="absolute inset-0 h-full w-full object-cover opacity-55"
         aria-label={heroClips[activeClip].title}
       >
