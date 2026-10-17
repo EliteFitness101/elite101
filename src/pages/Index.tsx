@@ -126,19 +126,25 @@ const Index = () => {
           </div>
 
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-20">
+          {/* Visual pathway cards: real media assets, not placeholder metric tiles */}
+          <div className="mx-auto mt-16 grid max-w-5xl gap-4 text-left sm:grid-cols-3">
             {[
-              { value: "ResoFlex™", label: "Vision Scoring" },
-              { value: "Creator-first", label: "Profile & application" },
-              { value: "One flow", label: "From match to booking" },
-            ].map((s) => (
-              <div key={s.label} className="glass rounded-xl py-5 px-3">
-                <div className="font-display text-3xl text-gradient-gold">{s.value}</div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground mt-1">
-                  {s.label}
+              { src: "/Creator_applying_for_streaming_role_20261017010020.mp4", title: "Build your profile", text: "Introduce your skills and creator interests.", to: "/auth?role=model&intent=become-model" },
+              { src: "/Livestream_host_recruitment_video_20261017005535.mp4", title: "Explore live creator work", text: "Review the creator pathway and its requirements.", to: "/pathways?intent=bigo" },
+              { src: "/Creator_filming_travel_content_20261017005213.mp4", title: "Find your next step", text: "Explore talent discovery and brand opportunities.", to: "/marketplace" },
+            ].map((item) => (
+              <Link key={item.title} to={item.to} className="group relative isolate min-h-64 overflow-hidden rounded-2xl border border-white/15 bg-black/50 text-left shadow-xl transition duration-300 hover:-translate-y-1 hover:border-gold/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                <video autoPlay muted loop playsInline preload="metadata" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105">
+                  <source src={item.src} type="video/mp4" />
+                </video>
+                <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black via-black/55 to-black/5" />
+                <div className="flex min-h-64 flex-col justify-end p-5 sm:p-6">
+                  <div className="mb-2 text-xs uppercase tracking-[.2em] text-gold">Explore Elite</div>
+                  <h3 className="font-display text-3xl text-white">{item.title}</h3>
+                  <p className="mt-2 max-w-xs text-sm leading-5 text-white/70">{item.text}</p>
+                  <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-gold">Explore pathway <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -149,16 +155,16 @@ const Index = () => {
         <div className="text-center mb-16">
           <div className="text-xs uppercase tracking-[0.3em] text-gold mb-3">The Workflow</div>
           <h2 className="font-display text-4xl md:text-5xl">
-            Model → ResoFlex™ Score → Match → Booking → Payment
+            Profile → Discovery → Match → Booking request → Agreed terms
           </h2>
         </div>
         <div className="grid md:grid-cols-5 gap-4">
           {[
             { icon: Crown, title: "Apply", desc: "Models upload photos, bio, IG handle." },
-            { icon: Brain, title: "ResoFlex™ Scout", desc: "Vision engine scores 0–100 and assigns category." },
+            { icon: Brain, title: "Profile review", desc: "Present your profile clearly for discovery and consideration." },
             { icon: Target, title: "Match", desc: "Brands get ranked talent for each campaign." },
-            { icon: Calendar, title: "Book", desc: "One-click booking with instant confirmation." },
-            { icon: CreditCard, title: "Pay", desc: "Secure Paystack checkout. Models get paid." },
+            { icon: Calendar, title: "Booking request", desc: "Discuss scope, availability, timing, and agreed terms." },
+            { icon: CreditCard, title: "Payment", desc: "Use the available checkout and confirm payment terms before proceeding." },
           ].map((s, i) => (
             <div
               key={s.title}
