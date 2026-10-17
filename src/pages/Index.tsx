@@ -122,12 +122,12 @@ const Index = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg" className="bg-gold text-primary-foreground hover:opacity-90 glow-gold text-base h-12 px-8">
-              <Link to="/auth?role=model">
+              <Link to="/auth?role=model&intent=become-model">
                 Become a Model <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-neon text-neon hover:bg-neon/10 text-base h-12 px-8">
-              <Link to="/auth?role=brand">
+              <Link to="/auth?role=brand&intent=book-talent">
                 Book Talent <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -138,8 +138,8 @@ const Index = () => {
           <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-20">
             {[
               { value: "ResoFlex™", label: "Vision Scoring" },
-              { value: "24h", label: "Avg Booking Time" },
-              { value: "100%", label: "Secure Payments" },
+              { value: "Creator-first", label: "Profile & application" },
+              { value: "One flow", label: "From match to booking" },
             ].map((s) => (
               <div key={s.label} className="glass rounded-xl py-5 px-3">
                 <div className="font-display text-3xl text-gradient-gold">{s.value}</div>
