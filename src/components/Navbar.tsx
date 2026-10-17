@@ -61,12 +61,12 @@ export const Navbar = () => {
 
       <div className="border-t border-gold/10">
         <nav aria-label="Quick paths" className="container flex gap-2 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <a href="https://www.bigo.tv/" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Start BIGO Live ↗</a>
-          <Link to="/auth?role=model&intent=start-earning" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Start Earning</Link>
-          <Link to="/auth?role=model&intent=earn-from-home" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Earn From Home</Link>
-          <Link to="/auth?role=model&intent=work-from-home" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Work From Home</Link>
-          <Link to="/auth?role=model&intent=student-support" title="Enquiry only; support eligibility is not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Student Support Enquiry</Link>
-          <Link to="/auth?role=model&intent=soft-loan-enquiry" title="Enquiry only; loan availability and approval are not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Soft Loan Enquiry</Link>
+          <Link to="/pathways?intent=bigo" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Start BIGO Live</Link>
+          <Link to="/pathways?intent=start-earning" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Start Earning</Link>
+          <Link to="/pathways?intent=earn-from-home" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Earn From Home</Link>
+          <Link to="/pathways?intent=work-from-home" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Work From Home</Link>
+          <Link to="/pathways?intent=student-support" title="Enquiry only; support eligibility is not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Student Support Enquiry</Link>
+          <Link to="/pathways?intent=soft-loan-enquiry" title="Enquiry only; loan availability and approval are not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Soft Loan Enquiry</Link>
           <a href="https://shop.resofit.fit/" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-neon/30 px-3 py-1.5 text-xs text-neon hover:bg-neon/10">Shop Gadgets ↗</a>
         </nav>
       </div>
