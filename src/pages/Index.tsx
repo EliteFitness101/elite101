@@ -80,9 +80,9 @@ const HeroVideoReel = () => {
         <button type="button" onClick={() => setMuted((value) => !value)} aria-label={muted ? "Unmute video" : "Mute video"} title={muted ? "Unmute" : "Mute"} className="rounded-full p-2 hover:bg-white/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
           {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
-        <label className="hidden sm:flex items-center gap-2 text-[11px] text-white/80">
+        <label className="flex items-center gap-1 text-[11px] text-white/80">
           <span>VOL</span>
-          <input aria-label="Video volume" type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} className="w-16 accent-amber-300" />
+          <input aria-label="Video volume" type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} className="w-12 sm:w-16 accent-amber-300" />
           <span className="w-7 tabular-nums">{volume}%</span>
         </label>
       </div>
@@ -134,16 +134,7 @@ const Index = () => {
           </div>
 
 
-          <div className="mt-7 flex flex-wrap justify-center gap-2" aria-label="Quick paths">
-            <a href="https://www.bigo.tv/" target="_blank" rel="noreferrer" className="rounded-full border border-gold/50 bg-black/35 px-4 py-2 text-sm font-medium text-gold backdrop-blur-md transition hover:bg-gold/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">Start BIGO Live ↗</a>
-            <Link to="/auth?role=model" className="rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm text-foreground backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10">Start Earning</Link>
-            <Link to="/auth?role=model" className="rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm text-foreground backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10">Earn From Home</Link>
-            <Link to="/auth?role=model" className="rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm text-foreground backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10">Work From Home</Link>
-            <Link to="/auth?role=model" title="Create a profile to enquire; support eligibility is not guaranteed" className="rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm text-foreground backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10">Student Support</Link>
-            <Link to="/auth?role=model" title="Enquiry only; loan availability and approval are not guaranteed" className="rounded-full border border-white/20 bg-black/30 px-4 py-2 text-sm text-foreground backdrop-blur-md transition hover:border-gold/60 hover:bg-gold/10">Soft Loan Enquiry</Link>
-            <a href="https://shop.resofit.fit/" target="_blank" rel="noreferrer" className="rounded-full border border-neon/40 bg-black/30 px-4 py-2 text-sm text-neon backdrop-blur-md transition hover:bg-neon/10">Shop Gadgets ↗</a>
-          </div>
-\n                    {/* Stats */}
+          {/* Stats */}
           <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-20">
             {[
               { value: "ResoFlex™", label: "Vision Scoring" },
