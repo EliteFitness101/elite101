@@ -117,8 +117,8 @@ const Index = () => {
             <br /> modeling marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Discover, score, and book Africa's top fashion, beauty, and influencer talent —
-            powered by ResoFlex™. From discovery to payment in under 24 hours.
+            Discover and book fashion, beauty, and creator talent through one streamlined marketplace —
+            or build your creator profile to explore brand opportunities.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg" className="bg-gold text-primary-foreground hover:opacity-90 glow-gold text-base h-12 px-8">
