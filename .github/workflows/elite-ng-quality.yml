@@ -1,0 +1,47 @@
+name: Elite NG quality gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "fix/elite-ng-questionnaire-production"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: elite-ng-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile npm lockfile with package.json
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit lockfile reconciliation on branch pushes
+        if: github.event_name == 'push'
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "Sync npm lockfile with package.json"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Lint changed production paths
+        run: npx eslint src/App.tsx src/pages/Index.tsx src/pages/Questionnaire.tsx supabase/functions/elite-host-apply/index.ts
+      - name: Unit tests
+        run: npm run test -- --passWithNoTests
+      - name: Production build
+        run: npm run build
