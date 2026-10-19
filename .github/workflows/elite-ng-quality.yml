@@ -7,7 +7,7 @@ on:
     branches: [main, "fix/elite-ng-questionnaire-production"]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: elite-ng-quality-${{ github.ref }}
@@ -25,6 +25,18 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Reconcile npm lockfile with package.json
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit lockfile reconciliation on branch pushes
+        if: github.event_name == 'push'
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "Sync npm lockfile with package.json"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - name: Install locked dependencies
         run: npm ci
       - name: Lint
