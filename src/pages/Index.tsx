@@ -123,6 +123,11 @@ const Index = () => {
                 Book Talent <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
+            <Button asChild size="lg" variant="outline" className="border-amber-300/70 text-amber-200 hover:bg-amber-300/10 text-base h-12 px-8">
+              <Link to="/questionnaire">
+                Apply as a BIGO Host <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
           </div>
 
 
