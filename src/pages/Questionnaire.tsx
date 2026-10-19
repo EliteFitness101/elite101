@@ -1,4 +1,5 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -19,7 +20,8 @@ const Questionnaire = () => {
     setMessage("");
     setReference("");
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const payload = {
       full_name: String(form.get("full_name") ?? "").trim(),
       email: String(form.get("email") ?? "").trim().toLowerCase(),
@@ -57,7 +59,7 @@ const Questionnaire = () => {
       setSubmission("success");
       setReference(data.reference || "");
       setMessage(data.message || "Your application has been received.");
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (error) {
       console.error("Elite NG application submission failed", error);
       setSubmission("error");
