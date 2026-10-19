@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import NewCampaign from "./pages/campaigns/NewCampaign";
 import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
+import Questionnaire from "./pages/Questionnaire";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/models/:id" element={<ModelProfile />} />
             <Route path="/booking/success" element={<BookingSuccess />} />
+            <Route path="/questionnaire" element={<Questionnaire />} />
 
             <Route path="/onboarding/model" element={<ProtectedRoute requireRole="model"><ModelOnboarding /></ProtectedRoute>} />
             <Route path="/onboarding/brand" element={<ProtectedRoute requireRole="brand"><BrandOnboarding /></ProtectedRoute>} />
