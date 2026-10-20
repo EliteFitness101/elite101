@@ -21,6 +21,7 @@ import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
 import Questionnaire from "./pages/Questionnaire";
 import Monetization from "./pages/Monetization";
+import BrandGrowth from "./pages/BrandGrowth";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
             <Route path="/monetization" element={<Monetization />} />
+            <Route path="/brand-growth" element={<BrandGrowth />} />
             <Route path="/offers/:slug" element={<Monetization />} />
 
             <Route path="/onboarding/model" element={<ProtectedRoute requireRole="model"><ModelOnboarding /></ProtectedRoute>} />
