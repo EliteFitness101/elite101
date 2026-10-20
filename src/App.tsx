@@ -20,6 +20,7 @@ import NewCampaign from "./pages/campaigns/NewCampaign";
 import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
 import Questionnaire from "./pages/Questionnaire";
+import Monetization from "./pages/Monetization";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,8 @@ const App = () => (
             <Route path="/models/:id" element={<ModelProfile />} />
             <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
+            <Route path="/monetization" element={<Monetization />} />
+            <Route path="/offers/:slug" element={<Monetization />} />
 
             <Route path="/onboarding/model" element={<ProtectedRoute requireRole="model"><ModelOnboarding /></ProtectedRoute>} />
             <Route path="/onboarding/brand" element={<ProtectedRoute requireRole="brand"><BrandOnboarding /></ProtectedRoute>} />
