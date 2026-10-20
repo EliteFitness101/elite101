@@ -166,7 +166,7 @@ function PricingPage() {
             { icon: Film, title: "Create", text: "Turn authorized footage into polished short-form assets." },
             { icon: Layers3, title: "Organize", text: "Keep clips, captions, covers, and plans together." },
             { icon: Users, title: "Scale", text: "Coordinate multiple creators with a defined workflow." },
-          ].map(({ icon: Icon, title, text }) => <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }} className="elite-glass rounded-2xl p-5 text-left" key={title}><Icon className="mb-5 h-5 w-5 text-[#e9c979]" /><p className="text-lg font-medium">{title}</p><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></div>)}
+          ].map(({ icon: Icon, title, text }) => <div className="elite-glass rounded-2xl p-5 text-left" key={title}><Icon className="mb-5 h-5 w-5 text-[#e9c979]" /><p className="text-lg font-medium">{title}</p><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></div>)}
         </div>
       </header>
 
@@ -187,7 +187,7 @@ function PricingPage() {
         </div>
       </motion.section>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
+      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
         <div className="mb-10 max-w-3xl"><p className="elite-kicker mb-3">COMPARE THE VALUE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Know what you’re choosing.</h2><p className="mt-4 text-sm leading-6 text-white/55">Production is a service. Subscriptions are software access. They are priced separately so editing work is never silently bundled into an unlimited plan.</p></div>
         <div className="elite-glass overflow-x-auto rounded-3xl">
           <table className="w-full min-w-[700px] border-collapse text-left text-sm">
@@ -207,7 +207,7 @@ function PricingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-14 sm:px-6 md:py-20">
+      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="how-it-works" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-14 sm:px-6 md:py-20">
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <div><p className="elite-kicker mb-3">SIMPLE BY DESIGN</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">From raw footage to <span className="elite-gold-text">ready to publish.</span></h2><p className="mt-5 text-sm leading-7 text-white/55">A transparent workflow from brief to delivery. Automated capture and posting are used only when the relevant integration has been tested and enabled.</p><Link className="mt-7 inline-flex items-center text-sm font-medium text-[#f4d58b] hover:gap-3 gap-2 transition-all" to="/questionnaire">Tell us what you need <ArrowRight className="h-4 w-4" /></Link></div>
           <div className="space-y-3">
@@ -221,7 +221,7 @@ function PricingPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-5xl px-4 py-14 sm:px-6 md:py-20">
+      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-5xl px-4 py-14 sm:px-6 md:py-20">
         <div className="elite-glass rounded-[2rem] p-6 sm:p-10 md:p-14">
           <p className="elite-kicker mb-3">BUILT AROUND YOUR WORKFLOW</p><h2 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">Your content deserves more than a folder full of clips.</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -235,7 +235,7 @@ function PricingPage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20">
+      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20">
         <div className="mb-8 text-center"><p className="elite-kicker mb-3">GOOD TO KNOW</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Frequently asked.</h2></div>
         <Accordion.Root type="single" collapsible className="space-y-3">
           {faqs.map((faq, index) => <Accordion.Item value={`faq-${index}`} key={faq.q} className="elite-glass overflow-hidden rounded-2xl"><Accordion.Header><Accordion.Trigger className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium hover:text-[#f4d58b] [&[data-state=open]>svg]:rotate-180">{faq.q}<ChevronDown className="h-4 w-4 shrink-0 transition-transform" /></Accordion.Trigger></Accordion.Header><Accordion.Content className="px-5 pb-5 text-sm leading-7 text-white/55 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">{faq.a}</Accordion.Content></Accordion.Item>)}
