@@ -205,7 +205,7 @@ function PricingPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </motion.section>
 
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="how-it-works" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-14 sm:px-6 md:py-20">
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
@@ -219,7 +219,7 @@ function PricingPage() {
             ].map((step) => <div className="elite-glass flex gap-5 rounded-2xl p-5 sm:p-6" key={step.n}><span className="elite-step-number">{step.n}</span><div><h3 className="font-medium">{step.title}</h3><p className="mt-2 text-sm leading-6 text-white/50">{step.text}</p></div></div>)}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-5xl px-4 py-14 sm:px-6 md:py-20">
         <div className="elite-glass rounded-[2rem] p-6 sm:p-10 md:p-14">
@@ -233,14 +233,14 @@ function PricingPage() {
             ].map(({ icon: Icon, title, text }) => <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5" key={title}><Icon className="mb-4 h-5 w-5 text-[#e9c979]" /><h3 className="font-medium">{title}</h3><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></div>)}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20">
         <div className="mb-8 text-center"><p className="elite-kicker mb-3">GOOD TO KNOW</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Frequently asked.</h2></div>
         <Accordion.Root type="single" collapsible className="space-y-3">
           {faqs.map((faq, index) => <Accordion.Item value={`faq-${index}`} key={faq.q} className="elite-glass overflow-hidden rounded-2xl"><Accordion.Header><Accordion.Trigger className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium hover:text-[#f4d58b] [&[data-state=open]>svg]:rotate-180">{faq.q}<ChevronDown className="h-4 w-4 shrink-0 transition-transform" /></Accordion.Trigger></Accordion.Header><Accordion.Content className="px-5 pb-5 text-sm leading-7 text-white/55 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">{faq.a}</Accordion.Content></Accordion.Item>)}
         </Accordion.Root>
-      </section>
+      </motion.section>
 
       <footer className="relative z-10 border-t border-white/10 px-4 py-10 text-center">
         <div className="mx-auto max-w-5xl"><div className="elite-wordmark">ELITE<span> NG</span></div><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/45">Creator growth. Premium media. Better systems.</p><div className="mt-6 flex flex-wrap justify-center gap-5 text-xs text-white/45"><a href="#offers" className="hover:text-white">Offers</a><Link to="/pathways" className="hover:text-white">Creator pathways</Link><Link to="/questionnaire" className="hover:text-white">Get started</Link><Link to="/auth" className="hover:text-white">Sign in</Link></div><p className="mt-8 text-[11px] text-white/30">Prices are proposed launch-test prices. Final scope, currency, tax, payment methods, and terms are confirmed before purchase.</p></div>
