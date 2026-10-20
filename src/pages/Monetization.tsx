@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import * as Tabs from "@radix-ui/react-tabs";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
   ArrowDownRight, ArrowRight, Check, ChevronDown, Clapperboard, Crown, Film,
-  Layers3, Menu, Play, ShieldCheck, Sparkles, Users, WandSparkles, X,
+  Layers3, ShieldCheck, Sparkles, Users, WandSparkles,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
