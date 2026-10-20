@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import * as Accordion from "@radix-ui/react-accordion";
+import { motion } from "framer-motion";
 import {
   ArrowDownRight, ArrowRight, Check, ChevronDown, Clapperboard, Crown, Film,
   Layers3, ShieldCheck, Sparkles, Users, WandSparkles,
@@ -165,11 +166,11 @@ function PricingPage() {
             { icon: Film, title: "Create", text: "Turn authorized footage into polished short-form assets." },
             { icon: Layers3, title: "Organize", text: "Keep clips, captions, covers, and plans together." },
             { icon: Users, title: "Scale", text: "Coordinate multiple creators with a defined workflow." },
-          ].map(({ icon: Icon, title, text }) => <div className="elite-glass rounded-2xl p-5 text-left" key={title}><Icon className="mb-5 h-5 w-5 text-[#e9c979]" /><p className="text-lg font-medium">{title}</p><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></div>)}
+          ].map(({ icon: Icon, title, text }) => <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }} className="elite-glass rounded-2xl p-5 text-left" key={title}><Icon className="mb-5 h-5 w-5 text-[#e9c979]" /><p className="text-lg font-medium">{title}</p><p className="mt-2 text-sm leading-6 text-white/50">{text}</p></div>)}
         </div>
       </header>
 
-      <section id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
+      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">A better workflow, <span className="elite-gold-text">at your pace.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Start with a defined production package. Add software or team capacity when your workflow is ready.</p></div>
           <div className="elite-glass inline-flex w-fit rounded-full p-1" role="group" aria-label="Subscription billing view">
@@ -184,7 +185,7 @@ function PricingPage() {
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           {offers.filter((offer) => ["highlight-launch-pack", "agency-production-retainer"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} />)}
         </div>
-      </section>
+      </motion.section>
 
       <section className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24">
         <div className="mb-10 max-w-3xl"><p className="elite-kicker mb-3">COMPARE THE VALUE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Know what you’re choosing.</h2><p className="mt-4 text-sm leading-6 text-white/55">Production is a service. Subscriptions are software access. They are priced separately so editing work is never silently bundled into an unlimited plan.</p></div>
