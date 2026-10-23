@@ -88,7 +88,20 @@ const Auth = () => {
       toast.success("Account created. Check your email for a verification link before signing in.");
       setTab("signin");
     } else if (data.user && data.session) {
-      toast.success("Welcome to Elite NG!");
+      if (interestIntent.startsWith("elite-")) {
+        const { error: requestError } = await supabase.functions.invoke("elite-media-request", {
+          body: { intent: interestIntent },
+        });
+        if (requestError) {
+          toast.error("Account created, but your Elite Media request could not be submitted. Sign in again from this offer to retry.");
+        } else {
+          toast.success(interestIntent === "elite-media-free-trial"
+            ? "Welcome to Elite NG. Your free 7-day pilot request is queued for review."
+            : "Welcome to Elite NG. Your offer request is queued for review.");
+        }
+      } else {
+        toast.success("Welcome to Elite NG!");
+      }
       await refreshRoles();
       navigate(parsed.data.role === "brand" ? "/onboarding/brand" : "/onboarding/model", { replace: true });
     }
@@ -140,11 +153,24 @@ const Auth = () => {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,
     });
-    if (error) toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+    } else if (data.session && interestIntent.startsWith("elite-")) {
+      const { error: requestError } = await supabase.functions.invoke("elite-media-request", {
+        body: { intent: interestIntent },
+      });
+      if (requestError) {
+        toast.error("Signed in, but your Elite Media request could not be submitted. Please retry from this offer.");
+      } else {
+        toast.success(interestIntent === "elite-media-free-trial"
+          ? "Your free 7-day pilot request is queued for review."
+          : "Your Elite Media offer request is queued for review.");
+      }
+    }
     setLoading(false);
   };
 
