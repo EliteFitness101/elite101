@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,11 +56,34 @@ const Auth = () => {
   const [resetRequested, setResetRequested] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
 
+  const handledEliteIntent = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!resetMode && user && roles.length > 0) {
-      navigate(roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model", { replace: true });
-    }
-  }, [user, roles, navigate, resetMode]);
+    if (resetMode || !user || roles.length === 0) return;
+    let cancelled = false;
+    const destination = roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model";
+
+    const continueSignedInUser = async () => {
+      if (interestIntent.startsWith("elite-") && handledEliteIntent.current !== user.id + ":" + interestIntent) {
+        handledEliteIntent.current = user.id + ":" + interestIntent;
+        const { error } = await supabase.functions.invoke("elite-media-request", {
+          body: { intent: interestIntent },
+        });
+        if (cancelled) return;
+        if (error) {
+          toast.error("Your account is signed in, but the Elite Media request could not be submitted. Return to the offer and retry.");
+        } else {
+          toast.success(interestIntent === "elite-media-free-trial"
+            ? "Your free 7-day pilot request is queued for review."
+            : "Your Elite Media offer request is queued for review.");
+        }
+      }
+      if (!cancelled) navigate(destination, { replace: true });
+    };
+
+    void continueSignedInUser();
+    return () => { cancelled = true; };
+  }, [user, roles, navigate, resetMode, interestIntent]);
 
   const onSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +97,7 @@ const Auth = () => {
       email: parsed.data.email,
       password: parsed.data.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: `${window.location.origin}/auth?role=${parsed.data.role}&intent=${encodeURIComponent(interestIntent)}`,
         data: { display_name: parsed.data.displayName, app_role: parsed.data.role, interest_intent: interestIntent },
       },
     });
@@ -88,20 +111,7 @@ const Auth = () => {
       toast.success("Account created. Check your email for a verification link before signing in.");
       setTab("signin");
     } else if (data.user && data.session) {
-      if (interestIntent.startsWith("elite-")) {
-        const { error: requestError } = await supabase.functions.invoke("elite-media-request", {
-          body: { intent: interestIntent },
-        });
-        if (requestError) {
-          toast.error("Account created, but your Elite Media request could not be submitted. Sign in again from this offer to retry.");
-        } else {
-          toast.success(interestIntent === "elite-media-free-trial"
-            ? "Welcome to Elite NG. Your free 7-day pilot request is queued for review."
-            : "Welcome to Elite NG. Your offer request is queued for review.");
-        }
-      } else {
-        toast.success("Welcome to Elite NG!");
-      }
+      if (!interestIntent.startsWith("elite-")) toast.success("Welcome to Elite NG!");
       await refreshRoles();
       navigate(parsed.data.role === "brand" ? "/onboarding/brand" : "/onboarding/model", { replace: true });
     }
@@ -159,17 +169,6 @@ const Auth = () => {
     });
     if (error) {
       toast.error(error.message);
-    } else if (data.session && interestIntent.startsWith("elite-")) {
-      const { error: requestError } = await supabase.functions.invoke("elite-media-request", {
-        body: { intent: interestIntent },
-      });
-      if (requestError) {
-        toast.error("Signed in, but your Elite Media request could not be submitted. Please retry from this offer.");
-      } else {
-        toast.success(interestIntent === "elite-media-free-trial"
-          ? "Your free 7-day pilot request is queued for review."
-          : "Your Elite Media offer request is queued for review.");
-      }
     }
     setLoading(false);
   };
