@@ -24,7 +24,7 @@ export const Navbar = () => {
             ELITE <span className="text-gradient-gold">NG</span>
           </span>
         </Link>
-        <nav className="hidden md:flex items-center gap-4">
+        <nav className="hidden md:flex items-center gap-4">\n          <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Explore Elite Media</Link>
           <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">
             Marketplace
           </Link>

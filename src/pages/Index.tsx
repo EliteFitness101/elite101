@@ -128,6 +128,11 @@ const Index = () => {
                 Apply as a BIGO Host <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
+            <Button asChild size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 text-base h-12 px-8">
+              <Link to="/explore">
+                Explore Elite Media <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
           </div>
 
 
