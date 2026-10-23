@@ -150,11 +150,12 @@ function PricingPage() {
       <header className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 md:pb-24 md:pt-24">
         <div className="mx-auto max-w-4xl text-center">
           <span className="elite-pill mb-7"><span className="elite-live-dot" /> THE CREATOR OPERATING SYSTEM</span>
-          <p className="elite-kicker mb-5">ELITE NG · CREATOR GROWTH & MEDIA</p>
+          <p className="elite-kicker mb-5">ELITE MEDIA · CREATOR GROWTH & AUTOMATION</p>
           <h1 className="text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl md:text-8xl">Make every moment <span className="elite-gold-text">work harder.</span></h1>
-          <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-white/60 sm:text-lg">Premium creator media production and a cleaner publishing workflow—built for creators and the teams helping them grow.</p>
+          <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-white/60 sm:text-lg">Turn approved BIGO highlights into social-ready clips, prepare captions and content calendars, and coordinate publishing workflows across your connected platforms.</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="#offers" className="elite-cta inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-semibold">Explore offers <ArrowRight className="ml-2 h-4 w-4" /></a>
+            <a href="#trial" className="elite-cta inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-semibold">Try 7 days free <ArrowRight className="ml-2 h-4 w-4" /></a>
+            <a href="#offers" className="elite-glass inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-medium text-white/80">Compare plans <ArrowDownRight className="ml-2 h-4 w-4" /></a>
             <a href="#how-it-works" className="elite-glass inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-medium text-white/80">How it works <ArrowDownRight className="ml-2 h-4 w-4" /></a>
           </div>
           <div className="mt-12 flex flex-wrap justify-center gap-2">
@@ -172,13 +173,33 @@ function PricingPage() {
 
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">A better workflow, <span className="elite-gold-text">at your pace.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Start with a defined production package. Add software or team capacity when your workflow is ready.</p></div>
+          <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Choose your next step: <span className="elite-gold-text">trial or plan.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Try the free 7-day pilot first, choose a creator plan, or request managed production when you are ready.</p></div>
           <div className="elite-glass inline-flex w-fit rounded-full p-1" role="group" aria-label="Subscription billing view">
             <button onClick={() => setBilling("monthly")} className={`rounded-full px-4 py-2 text-xs font-medium transition ${billing === "monthly" ? "bg-[#e9c979] text-black" : "text-white/60"}`}>Monthly</button>
             <button onClick={() => setBilling("annual")} className={`rounded-full px-4 py-2 text-xs font-medium transition ${billing === "annual" ? "bg-[#e9c979] text-black" : "text-white/60"}`}>Annual · 2 months free</button>
           </div>
         </div>
         {billing === "annual" && <p className="mb-5 text-xs text-[#f4d58b]/80">Illustrative annual billing: 10 monthly payments’ worth charged per year. Enable only after annual billing is configured in checkout.</p>}
+        <div id="trial" className="elite-glass mb-8 scroll-mt-24 overflow-hidden rounded-[1.8rem] border border-[#e9c979]/30 p-6 sm:p-8 md:p-10">
+          <div className="grid gap-7 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
+            <div>
+              <span className="elite-pill mb-4"><Sparkles className="h-3 w-3" /> FREE 7-DAY CREATOR PILOT</span>
+              <h3 className="text-3xl font-semibold tracking-tight sm:text-4xl">Try Elite Media before you subscribe.</h3>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60">Start with a focused one-week pilot. See how your approved BIGO highlights can become a more consistent content workflow—then decide whether a paid plan is worth continuing.</p>
+              <p className="mt-4 text-sm font-medium text-[#f4d58b]">Free for 7 days · No automatic paid subscription</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+              <p className="elite-kicker mb-4">YOUR PILOT INCLUDES</p>
+              <ul className="space-y-3 text-sm text-white/70">
+                {["Review of your creator goals and approved source media", "One sample vertical highlight clip, subject to media suitability", "Three caption/post drafts with platform-specific hooks", "A simple 7-day content plan", "Review of supported publishing options for your connected accounts"].map((item) => <li key={item} className="flex gap-3"><Check className="mt-0.5 h-4 w-4 shrink-0 text-[#e9c979]" />{item}</li>)}
+              </ul>
+              <Button asChild className="elite-cta mt-6 h-12 w-full rounded-full font-semibold">
+                <Link to="/auth?role=model&intent=elite-media-free-trial">Request my free trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              </Button>
+              <p className="mt-3 text-center text-[11px] leading-5 text-white/40">Trial delivery is confirmed after signup and scope review. Publishing is automated only where an integration is connected and verified.</p>
+            </div>
+          </div>
+        </div>
         <div className="grid gap-4 lg:grid-cols-3">
           {subscriptions.map((offer) => <OfferCard key={offer.slug} offer={billing === "annual" ? { ...offer, price: monthlyPrice(offer), period: "year" } : offer} />)}
         </div>
