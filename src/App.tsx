@@ -17,6 +17,7 @@ import BrandOnboarding from "./pages/onboarding/BrandOnboarding";
 import ModelDashboard from "./pages/dashboard/ModelDashboard";
 import BrandDashboard from "./pages/dashboard/BrandDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import EliteMediaDashboard from "./pages/dashboard/EliteMediaDashboard";
 import NewCampaign from "./pages/campaigns/NewCampaign";
 import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/dashboard/model" element={<ProtectedRoute requireRole="model"><ModelDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/brand" element={<ProtectedRoute requireRole="brand"><BrandDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/admin" element={<ProtectedRoute requireRole="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/elite-media" element={<ProtectedRoute><EliteMediaDashboard /></ProtectedRoute>} />
             <Route path="/campaigns/new" element={<ProtectedRoute requireRole="brand"><NewCampaign /></ProtectedRoute>} />
             <Route path="/campaigns/:id/matches" element={<ProtectedRoute requireRole="brand"><CampaignMatches /></ProtectedRoute>} />
 
