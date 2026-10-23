@@ -68,6 +68,11 @@ type EliteMediaRequestRow = {
   trial_starts_at: string | null;
   trial_ends_at: string | null;
   admin_notes: string | null;
+  onboarding_completed_at: string | null;
+  service_terms_accepted_at: string | null;
+  privacy_consent_at: string | null;
+  media_rights_confirmed_at: string | null;
+  subscription_status: string;
 };
 
 const fmtNGN = (n: number) =>
@@ -104,7 +109,7 @@ export default function AdminDashboard() {
           .select("id, amount_ngn, commission_ngn, status, created_at, models(full_name), brands(name)")
           .order("created_at", { ascending: false }).limit(50),
         supabase.from("elite_media_requests")
-          .select("id, user_id, email, display_name, intent, status, created_at, trial_starts_at, trial_ends_at, admin_notes")
+          .select("id, user_id, email, display_name, intent, status, created_at, trial_starts_at, trial_ends_at, admin_notes, onboarding_completed_at, service_terms_accepted_at, privacy_consent_at, media_rights_confirmed_at, subscription_status")
           .order("created_at", { ascending: false }).limit(100),
       ]);
 
@@ -143,6 +148,10 @@ export default function AdminDashboard() {
   const setbookingsSafe = (rows: any[]) => setBookings(rows as BookingRow[]);
 
   const updateEliteMediaRequest = async (request: EliteMediaRequestRow, status: "approved" | "rejected" | "in_progress" | "completed" | "cancelled") => {
+    if (status === "approved" && (!request.onboarding_completed_at || !request.service_terms_accepted_at || !request.privacy_consent_at || !request.media_rights_confirmed_at)) {
+      toast.error("Customer onboarding and all required consent records must be complete before approval.");
+      return;
+    }
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return toast.error("Could not verify the current admin session.");
     const patch: Record<string, unknown> = {
@@ -157,6 +166,29 @@ export default function AdminDashboard() {
     const { error } = await supabase.from("elite_media_requests").update(patch).eq("id", request.id);
     if (error) return toast.error("Update failed: " + error.message);
     toast.success("Elite Media request marked " + status.replace("_", " ") + ".");
+    await load();
+  };
+
+  const activateEliteMediaTrial = async (request: EliteMediaRequestRow) => {
+    if (!request.onboarding_completed_at || !request.service_terms_accepted_at || !request.privacy_consent_at || !request.media_rights_confirmed_at) {
+      toast.error("Complete the customer brief and all consent records before activating a trial.");
+      return;
+    }
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return toast.error("Could not verify the current admin session.");
+    const start = new Date();
+    const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const { error } = await supabase.from("elite_media_requests").update({
+      status: "in_progress",
+      approved_by: user.id,
+      approved_at: start.toISOString(),
+      trial_starts_at: start.toISOString(),
+      trial_ends_at: end.toISOString(),
+      subscription_status: "trial",
+      updated_at: start.toISOString(),
+    }).eq("id", request.id);
+    if (error) return toast.error("Trial activation failed: " + error.message);
+    toast.success("7-day trial activated. No paid subscription or charge was created.");
     await load();
   };
 
@@ -329,7 +361,8 @@ export default function AdminDashboard() {
                       <TableHead>Request</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Submitted</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Customer setup</TableHead>
+                      <TableHead>Status / trial</TableHead>
                       <TableHead className="text-right">Review actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -345,14 +378,20 @@ export default function AdminDashboard() {
                           <div className="text-xs text-muted-foreground">{request.email}</div>
                         </TableCell>
                         <TableCell>{new Date(request.created_at).toLocaleString()}</TableCell>
-                        <TableCell><StatusBadge status={request.status} /></TableCell>
+                        <TableCell>
+                          <div className="text-xs">{request.onboarding_completed_at ? "Brief complete" : "Brief incomplete"}</div>
+                          <div className="mt-1 text-[10px] text-muted-foreground">Terms {request.service_terms_accepted_at ? "✓" : "—"} · Privacy {request.privacy_consent_at ? "✓" : "—"} · Rights {request.media_rights_confirmed_at ? "✓" : "—"}</div>
+                          {request.trial_ends_at && <div className="mt-1 text-[10px] text-muted-foreground">Ends {new Date(request.trial_ends_at).toLocaleDateString()}</div>}
+                        </TableCell>
+                        <TableCell><StatusBadge status={request.status} /><div className="mt-1 text-xs text-muted-foreground">{request.subscription_status ?? "not_subscribed"}</div></TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
                             {request.status === "pending_review" && <>
                               <Button size="sm" onClick={() => updateEliteMediaRequest(request, "approved")}>Approve</Button>
                               <Button size="sm" variant="outline" onClick={() => updateEliteMediaRequest(request, "rejected")}>Reject</Button>
                             </>}
-                            {request.status === "approved" && <Button size="sm" variant="outline" onClick={() => updateEliteMediaRequest(request, "in_progress")}>Start work</Button>}
+                            {request.status === "approved" && request.intent === "elite-media-free-trial" && <Button size="sm" variant="outline" onClick={() => activateEliteMediaTrial(request)}>Activate 7-day trial</Button>}
+                            {request.status === "approved" && request.intent !== "elite-media-free-trial" && <Button size="sm" variant="outline" onClick={() => updateEliteMediaRequest(request, "in_progress")}>Start work</Button>}
                             {request.status === "in_progress" && <Button size="sm" variant="outline" onClick={() => updateEliteMediaRequest(request, "completed")}>Complete</Button>}
                             {["pending_review", "approved", "in_progress"].includes(request.status) && <Button size="sm" variant="ghost" onClick={() => updateEliteMediaRequest(request, "cancelled")}>Cancel</Button>}
                           </div>
