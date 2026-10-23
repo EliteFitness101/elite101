@@ -19,6 +19,7 @@ export function ChatB2KConcierge() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [answer, setAnswer] = useState("");
+  const [answerTo, setAnswerTo] = useState("/explore");
   const navigate = useNavigate();
 
   const sendMessage = () => {
@@ -31,6 +32,7 @@ export function ChatB2KConcierge() {
       : text.includes("onboard") || text.includes("start") || text.includes("help") ? prompts[1]
       : prompts[0];
     setAnswer(route.answer);
+    setAnswerTo(route.to);
     setMessage("");
   };
 
@@ -57,9 +59,9 @@ export function ChatB2KConcierge() {
               <div className="max-w-[95%] rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.055] p-3 text-sm leading-6 text-white/85">
                 Welcome to Elite Media. What would you like to accomplish today? Pick a path or ask me in your own words.
               </div>
-              {answer && <div className="rounded-2xl rounded-tl-sm border border-amber-200/20 bg-amber-200/[0.07] p-3 text-sm leading-6 text-white/85">{answer}<div className="mt-3"><button onClick={() => { const q = answer.toLowerCase(); navigate(q.includes("dashboard") ? "/auth" : q.includes("bigo") ? "/questionnaire" : q.includes("talent") ? "/marketplace" : q.includes("media production") ? "/monetization" : "/explore"); setOpen(false); }} className="inline-flex items-center gap-2 rounded-full bg-amber-200 px-3 py-2 text-xs font-semibold text-black">Continue <ArrowRight className="h-3.5 w-3.5" /></button></div></div>}
+              {answer && <div className="rounded-2xl rounded-tl-sm border border-amber-200/20 bg-amber-200/[0.07] p-3 text-sm leading-6 text-white/85">{answer}<div className="mt-3"><button onClick={() => { navigate(answerTo); setOpen(false); }} className="inline-flex items-center gap-2 rounded-full bg-amber-200 px-3 py-2 text-xs font-semibold text-black">Continue <ArrowRight className="h-3.5 w-3.5" /></button></div></div>}
               <div className="flex flex-wrap gap-2">
-                {prompts.map((item) => <button key={item.label} onClick={() => { setAnswer(item.answer); }} className="rounded-full border border-white/15 bg-white/[0.035] px-3 py-2 text-xs text-white/75 transition hover:border-amber-200/50 hover:bg-amber-200/10 hover:text-white">{item.label}</button>)}
+                {prompts.map((item) => <button key={item.label} onClick={() => { setAnswer(item.answer); setAnswerTo(item.to); }} className="rounded-full border border-white/15 bg-white/[0.035] px-3 py-2 text-xs text-white/75 transition hover:border-amber-200/50 hover:bg-amber-200/10 hover:text-white">{item.label}</button>)}
               </div>
               <p className="flex items-start gap-2 text-[11px] leading-5 text-white/45"><ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />Payments, connected platforms, and account-specific actions are confirmed in their own secure flows.</p>
             </div>
