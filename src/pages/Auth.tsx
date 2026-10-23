@@ -25,7 +25,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRole = (params.get("role") === "brand" ? "brand" : "model") as "model" | "brand";
-  const allowedIntents = ["start-earning", "earn-from-home", "work-from-home", "student-support", "soft-loan-enquiry", "become-model", "book-talent"] as const;
+  const allowedIntents = ["start-earning", "earn-from-home", "work-from-home", "student-support", "soft-loan-enquiry", "become-model", "book-talent", "elite-media-free-trial", "elite-highlight-launch-pack", "elite-creator-starter", "elite-creator-pro", "elite-agency-workspace", "elite-agency-production-retainer"] as const;
   const requestedIntent = params.get("intent") ?? "become-model";
   const interestIntent = (allowedIntents as readonly string[]).includes(requestedIntent) ? requestedIntent : "become-model";
   const intentLabels: Record<string, string> = {
@@ -36,6 +36,12 @@ const Auth = () => {
     "soft-loan-enquiry": "Soft-loan enquiry",
     "become-model": "Become a model or creator",
     "book-talent": "Book talent for a brand",
+    "elite-media-free-trial": "Request the free 7-day Elite Media pilot",
+    "elite-highlight-launch-pack": "Elite Media Highlight Launch Pack",
+    "elite-creator-starter": "Elite Media Starter plan",
+    "elite-creator-pro": "Elite Media Pro plan",
+    "elite-agency-workspace": "Elite Media Agency Workspace",
+    "elite-agency-production-retainer": "Elite Media Agency Production",
   };
   const { user, roles, refreshRoles } = useAuth();
 

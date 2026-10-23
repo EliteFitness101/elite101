@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { MotionConfig } from "framer-motion";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,11 +21,14 @@ import NewCampaign from "./pages/campaigns/NewCampaign";
 import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
 import Questionnaire from "./pages/Questionnaire";
+import Monetization from "./pages/Monetization";
+import BrandGrowth from "./pages/BrandGrowth";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <MotionConfig reducedMotion="user">
     <TooltipProvider>
       <Toaster />
       <Sonner theme="dark" />
@@ -38,6 +42,9 @@ const App = () => (
             <Route path="/models/:id" element={<ModelProfile />} />
             <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
+            <Route path="/monetization" element={<Monetization />} />
+            <Route path="/brand-growth" element={<BrandGrowth />} />
+            <Route path="/offers/:slug" element={<Monetization />} />
 
             <Route path="/onboarding/model" element={<ProtectedRoute requireRole="model"><ModelOnboarding /></ProtectedRoute>} />
             <Route path="/onboarding/brand" element={<ProtectedRoute requireRole="brand"><BrandOnboarding /></ProtectedRoute>} />
@@ -52,6 +59,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+    </MotionConfig>
   </QueryClientProvider>
 );
 
