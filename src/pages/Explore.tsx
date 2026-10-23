@@ -26,6 +26,26 @@ const countries = [
   { name: "Ghana", code: "GH", currency: "GHS" },
   { name: "South Africa", code: "ZA", currency: "ZAR" },
   { name: "Kenya", code: "KE", currency: "KES" },
+  { name: "Uganda", code: "UG", currency: "UGX" },
+  { name: "Tanzania", code: "TZ", currency: "TZS" },
+  { name: "Rwanda", code: "RW", currency: "RWF" },
+  { name: "Egypt", code: "EG", currency: "EGP" },
+  { name: "India", code: "IN", currency: "INR" },
+  { name: "Singapore", code: "SG", currency: "SGD" },
+  { name: "Malaysia", code: "MY", currency: "MYR" },
+  { name: "Philippines", code: "PH", currency: "PHP" },
+  { name: "Indonesia", code: "ID", currency: "IDR" },
+  { name: "Japan", code: "JP", currency: "JPY" },
+  { name: "Brazil", code: "BR", currency: "BRL" },
+  { name: "Mexico", code: "MX", currency: "MXN" },
+  { name: "Switzerland", code: "CH", currency: "CHF" },
+  { name: "Norway", code: "NO", currency: "NOK" },
+  { name: "Sweden", code: "SE", currency: "SEK" },
+  { name: "Denmark", code: "DK", currency: "DKK" },
+  { name: "Poland", code: "PL", currency: "PLN" },
+  { name: "Turkey", code: "TR", currency: "TRY" },
+  { name: "United Arab Emirates", code: "AE", currency: "AED" },
+  { name: "Saudi Arabia", code: "SA", currency: "SAR" },
   { name: "Other / choose currency", code: "OTHER", currency: "" },
 ];
 const currencies = ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "GHS", "ZAR", "KES", "USDT", "BTC", "ETH"];
@@ -51,8 +71,10 @@ export default function Explore() {
       .then((hint: { country?: string | null; currency?: string | null }) => {
         if (!active) return;
         const match = countries.find((item) => item.code === hint.country);
-        if (match && !countryTouched) setCountry(match.code);
-        if (hint.currency && currencies.includes(hint.currency) && !currencyTouched) setCurrency(hint.currency);
+        if (!countryTouched) {
+          if (match) setCountry(match.code);
+          if (hint.currency && currencies.includes(hint.currency) && !currencyTouched) setCurrency(hint.currency);
+        }
         setRegionStatus(hint.country ? "Region suggested automatically · change anytime" : "Choose your country manually");
       })
       .catch(() => { if (active) setRegionStatus("Choose your country manually"); });
