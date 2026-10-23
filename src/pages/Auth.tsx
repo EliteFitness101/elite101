@@ -162,6 +162,23 @@ const Auth = () => {
           {intentLabels[interestIntent]} · Africa's ResoFlex™ powered talent marketplace
         </p>
 
+        {interestIntent.startsWith("elite-") && !resetMode && (
+          <section aria-label="Selected Elite Media offer" className="mb-6 rounded-2xl border border-gold/35 bg-gold/5 p-4">
+            <p className="text-sm font-semibold text-foreground">Your Elite Media request</p>
+            {interestIntent === "elite-media-free-trial" ? (
+              <>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Request your free 7-day pilot: one sample highlight clip (subject to source-media suitability), three caption/post drafts, and a simple 7-day content plan.</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">No automatic paid subscription. The team confirms scope and start date after signup. Social publishing is included only where a supported integration is connected and verified.</p>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Your selected offer is attached to this signup request so the team can follow up about scope, availability, and the applicable checkout terms.</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">No payment is taken on this screen. Price, deliverables, taxes, and cancellation terms must be confirmed before checkout.</p>
+              </>
+            )}
+          </section>
+        )}
+
         {verificationEmail && !resetMode && (
           <div role="status" aria-live="polite" className="mb-6 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm">
             <h2 className="mb-1 font-semibold text-foreground">Check your email to verify your account</h2>
