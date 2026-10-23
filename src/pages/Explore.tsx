@@ -20,9 +20,16 @@ const countries = [
   { name: "Nigeria", code: "NG", currency: "NGN" },
   { name: "United States", code: "US", currency: "USD" },
   { name: "United Kingdom", code: "GB", currency: "GBP" },
-  { name: "Euro area", code: "EU", currency: "EUR" },
+  { name: "Germany", code: "DE", currency: "EUR" },
+  { name: "France", code: "FR", currency: "EUR" },
+  { name: "Ireland", code: "IE", currency: "EUR" },
+  { name: "Spain", code: "ES", currency: "EUR" },
+  { name: "Italy", code: "IT", currency: "EUR" },
+  { name: "Netherlands", code: "NL", currency: "EUR" },
+  { name: "Euro area (other)", code: "EU", currency: "EUR" },
   { name: "Canada", code: "CA", currency: "CAD" },
   { name: "Australia", code: "AU", currency: "AUD" },
+  { name: "New Zealand", code: "NZ", currency: "NZD" },
   { name: "Ghana", code: "GH", currency: "GHS" },
   { name: "South Africa", code: "ZA", currency: "ZAR" },
   { name: "Kenya", code: "KE", currency: "KES" },
@@ -48,7 +55,7 @@ const countries = [
   { name: "Saudi Arabia", code: "SA", currency: "SAR" },
   { name: "Other / choose currency", code: "OTHER", currency: "" },
 ];
-const currencies = ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "GHS", "ZAR", "KES", "USDT", "BTC", "ETH"];
+const currencies = ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "NZD", "GHS", "ZAR", "KES", "UGX", "TZS", "RWF", "EGP", "INR", "SGD", "MYR", "PHP", "IDR", "JPY", "BRL", "MXN", "CHF", "NOK", "SEK", "DKK", "PLN", "TRY", "AED", "SAR", "USDT", "BTC", "ETH"];
 const rails = [
   { value: "card", label: "Card / local checkout", detail: "Available methods and final currency are confirmed at checkout.", icon: CreditCard },
   { value: "crypto", label: "Crypto", detail: "Only shown as payable when a supported processor and asset are available.", icon: Coins },
