@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowDownRight, ArrowRight, Bot, Check, ChevronDown,
-  Coins, CreditCard, Film, Globe2, LoaderCircle, MonitorPlay, RadioTower,
+  Coins, CreditCard, Film, Globe2, LoaderCircle, MonitorPlay, Play, RadioTower,
   ShieldCheck, Sparkles, WandSparkles,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
@@ -56,6 +56,52 @@ const countries = [
   { name: "Other / choose currency", code: "OTHER", currency: "" },
 ];
 const currencies = ["NGN", "USD", "GBP", "EUR", "CAD", "AUD", "NZD", "GHS", "ZAR", "KES", "UGX", "TZS", "RWF", "EGP", "INR", "SGD", "MYR", "PHP", "IDR", "JPY", "BRL", "MXN", "CHF", "NOK", "SEK", "DKK", "PLN", "TRY", "AED", "SAR", "USDT", "BTC", "ETH"];
+function MediaPathwayCard({ item, index }: { item: (typeof pathways)[number]; index: number }) {
+  const cardRef = useRef<HTMLElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => setVisible(entries.some((entry) => entry.isIntersecting)),
+      { rootMargin: "120px", threshold: 0.15 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (visible) video.play().catch(() => undefined);
+    else video.pause();
+  }, [visible]);
+
+  const Icon = item.icon;
+  return (
+    <motion.article ref={cardRef} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .15 }} transition={{ delay: index * .06 }} className="group relative min-h-[330px] min-w-[82vw] snap-start overflow-hidden rounded-3xl border border-white/10 bg-[#101014] shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-amber-200/40 sm:min-w-[320px] xl:min-w-[calc(25%-12px)]">
+      <video ref={videoRef} className="absolute inset-0 h-full w-full object-cover opacity-45 transition duration-700 group-hover:scale-105 group-hover:opacity-60" autoPlay={visible} muted loop playsInline preload={visible ? "metadata" : "none"} poster="/bg-hero.webp" onLoadedData={() => setLoaded(true)} onError={(event) => { setLoaded(true); setFailed(true); event.currentTarget.style.opacity = "0.08"; }}>
+        <source src={item.video} type="video/mp4" /><source src={item.fallback} type="video/mp4" />
+      </video>
+      {!visible && !failed && <div className="absolute left-4 top-14 z-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[10px] text-white/65 backdrop-blur"><Play className="h-3.5 w-3.5" />Preview loads on scroll</div>}
+      {visible && !loaded && !failed && <div className="absolute left-4 top-14 z-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[10px] text-white/65 backdrop-blur"><LoaderCircle className="h-3.5 w-3.5 animate-spin" />Preparing preview</div>}
+      {failed && <div className="absolute left-4 top-14 z-10 rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[10px] text-white/65 backdrop-blur">Preview unavailable · details still available</div>}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-black/10" />
+      <div className="relative flex min-h-[330px] flex-col justify-end p-5">
+        <div className="mb-auto flex items-center justify-between pt-1"><span className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-[10px] tracking-[.2em] text-white/80">{item.tag}</span><Icon className="h-5 w-5 text-amber-200" /></div>
+        <h3 className="text-2xl font-semibold tracking-tight">{item.title}</h3><p className="mt-2 text-sm leading-6 text-white/65">{item.copy}</p><Link to={item.to} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-amber-200">{item.cta}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></Link>
+      </div>
+    </motion.article>
+  );
+}
+
 const rails = [
   { value: "card", label: "Card / local checkout", detail: "Available methods and final currency are confirmed at checkout.", icon: CreditCard },
   { value: "crypto", label: "Crypto", detail: "Only shown as payable when a supported processor and asset are available.", icon: Coins },
@@ -69,7 +115,6 @@ export default function Explore() {
   const [countryTouched, setCountryTouched] = useState(false);
   const [currencyTouched, setCurrencyTouched] = useState(false);
   const [regionStatus, setRegionStatus] = useState("Checking region…");
-  const [loadedMedia, setLoadedMedia] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let active = true;
@@ -135,16 +180,8 @@ export default function Explore() {
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:py-14">
         <div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-xs uppercase tracking-[.25em] text-amber-200">Choose a direction</p><h2 className="mt-2 text-3xl font-semibold sm:text-4xl">Explore by outcome</h2></div><span className="hidden items-center gap-2 text-xs text-white/45 sm:flex"><ChevronDown className="h-4 w-4" /> Scroll to explore</span></div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {pathways.map((item, index) => <motion.article key={item.title} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .15 }} transition={{ delay: index * .06 }} className="group relative min-h-[330px] overflow-hidden rounded-3xl border border-white/10 bg-[#101014] shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-amber-200/40">
-            <video className="absolute inset-0 h-full w-full object-cover opacity-45 transition duration-700 group-hover:scale-105 group-hover:opacity-60" autoPlay muted loop playsInline preload="metadata" poster="/bg-hero.webp" onLoadedData={() => setLoadedMedia((current) => ({ ...current, [item.title]: true }))} onError={(event) => { setLoadedMedia((current) => ({ ...current, [item.title]: true })); event.currentTarget.style.opacity = "0.08"; }}><source src={item.video} type="video/mp4" /><source src={item.fallback} type="video/mp4" /></video>
-            {!loadedMedia[item.title] && <div className="absolute left-4 top-14 z-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[10px] text-white/65 backdrop-blur"><LoaderCircle className="h-3.5 w-3.5 animate-spin" />Preparing preview</div> }
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/65 to-black/10" />
-            <div className="relative flex min-h-[330px] flex-col justify-end p-5">
-              <div className="mb-auto flex items-center justify-between pt-1"><span className="rounded-full border border-white/15 bg-black/25 px-3 py-1.5 text-[10px] tracking-[.2em] text-white/80">{item.tag}</span><item.icon className="h-5 w-5 text-amber-200" /></div>
-              <h3 className="text-2xl font-semibold tracking-tight">{item.title}</h3><p className="mt-2 text-sm leading-6 text-white/65">{item.copy}</p><Link to={item.to} className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-amber-200">{item.cta}<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></Link>
-            </div>
-          </motion.article>)}
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:thin]">
+          {pathways.map((item, index) => <MediaPathwayCard key={item.title} item={item} index={index} />)}
         </div>
       </section>
 
