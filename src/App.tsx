@@ -24,6 +24,8 @@ import BookingSuccess from "./pages/BookingSuccess";
 import Questionnaire from "./pages/Questionnaire";
 import Monetization from "./pages/Monetization";
 import BrandGrowth from "./pages/BrandGrowth";
+import Explore from "./pages/Explore";
+import { ChatB2KConcierge } from "@/components/ChatB2KConcierge";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/explore" element={<Explore />} />
             <Route path="/pathways" element={<Pathways />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
@@ -58,6 +61,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <ChatB2KConcierge />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
