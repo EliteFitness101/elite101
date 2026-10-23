@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, Bot, ChevronDown, CircleHelp, Compass, CreditCard, Globe2,
@@ -20,7 +20,6 @@ export function ChatB2KConcierge() {
   const [message, setMessage] = useState("");
   const [answer, setAnswer] = useState("");
   const navigate = useNavigate();
-  const location = useLocation();
 
   const sendMessage = () => {
     const text = message.trim().toLowerCase();
