@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowDownRight, ArrowRight, BadgeCheck, Bot, Check, ChevronDown, CircleHelp,
-  Coins, CreditCard, Film, Globe2, LoaderCircle, LockKeyhole, MessageCircle,
-  MonitorPlay, Play, RadioTower, ShieldCheck, Sparkles, WalletCards, WandSparkles,
+  ArrowDownRight, ArrowRight, Bot, Check, ChevronDown,
+  Coins, CreditCard, Film, Globe2, LockKeyhole, MonitorPlay, RadioTower,
+  ShieldCheck, Sparkles, WandSparkles,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,6 @@ export default function Explore() {
   const [currency, setCurrency] = useState("NGN");
   const [rail, setRail] = useState("card");
   const [goal, setGoal] = useState("media");
-  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
-  const [loadingPreview, setLoadingPreview] = useState(false);
   const selectedCountry = countries.find((item) => item.code === country) ?? countries[countries.length - 1];
   const selectedRail = rails.find((item) => item.value === rail) ?? rails[0];
   const recommendedPath = useMemo(() => goal === "talent" ? "/marketplace" : goal === "live" ? "/questionnaire" : goal === "agency" ? "/monetization" : "/monetization", [goal]);
@@ -108,7 +106,7 @@ export default function Explore() {
               <label className="text-xs font-medium text-white/65">Country / region<select value={country} onChange={(event) => updateCountry(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#111115] px-3 text-sm text-white outline-none focus:border-amber-200/50">{countries.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}</select></label>
               <label className="text-xs font-medium text-white/65">Preferred display / payment currency<select value={currency} onChange={(event) => setCurrency(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#111115] px-3 text-sm text-white outline-none focus:border-amber-200/50">{currencies.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
             </div>
-            <div className="mt-5 space-y-2">{rails.map((item) => <button type="button" key={item.value} onClick={() => { setRail(item.value); setShowPaymentDetails(true); }} className={`flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition ${rail === item.value ? "border-amber-200/45 bg-amber-200/[0.07]" : "border-white/10 bg-white/[0.02] hover:border-white/20"}`}><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${rail === item.value ? "bg-amber-200/15 text-amber-200" : "bg-white/5 text-white/55"}`}><item.icon className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 text-sm font-medium text-white/90">{item.label}{rail === item.value && <Check className="h-4 w-4 text-amber-200" />}</span><span className="mt-1 block text-xs leading-5 text-white/45">{item.detail}</span></span></button>)}</div>
+            <div className="mt-5 space-y-2">{rails.map((item) => <button type="button" key={item.value} onClick={() => { setRail(item.value); }} className={`flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition ${rail === item.value ? "border-amber-200/45 bg-amber-200/[0.07]" : "border-white/10 bg-white/[0.02] hover:border-white/20"}`}><span className={`mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl ${rail === item.value ? "bg-amber-200/15 text-amber-200" : "bg-white/5 text-white/55"}`}><item.icon className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2 text-sm font-medium text-white/90">{item.label}{rail === item.value && <Check className="h-4 w-4 text-amber-200" />}</span><span className="mt-1 block text-xs leading-5 text-white/45">{item.detail}</span></span></button>)}</div>
             <div className="mt-5 rounded-2xl border border-emerald-200/15 bg-emerald-200/[0.045] p-4"><p className="flex items-center gap-2 text-xs font-semibold text-emerald-100"><ShieldCheck className="h-4 w-4" /> Before you pay</p><p className="mt-2 text-xs leading-5 text-white/60">No exchange rate is guessed here. This preference is not a payment authorization or a promise that every rail is supported in every country.</p></div>
           </div>
           <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-white/[0.015] p-6 sm:p-8">
