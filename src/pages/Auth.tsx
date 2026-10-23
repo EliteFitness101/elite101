@@ -61,7 +61,7 @@ const Auth = () => {
   useEffect(() => {
     if (resetMode || !user || roles.length === 0) return;
     let cancelled = false;
-    const destination = roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model";
+    const destination = interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model");
 
     const continueSignedInUser = async () => {
       if (interestIntent.startsWith("elite-") && handledEliteIntent.current !== user.id + ":" + interestIntent) {
@@ -71,6 +71,7 @@ const Auth = () => {
         });
         if (cancelled) return;
         if (error) {
+          handledEliteIntent.current = null;
           toast.error("Your account is signed in, but the Elite Media request could not be submitted. Return to the offer and retry.");
         } else {
           toast.success(interestIntent === "elite-media-free-trial"
@@ -113,7 +114,7 @@ const Auth = () => {
     } else if (data.user && data.session) {
       if (!interestIntent.startsWith("elite-")) toast.success("Welcome to Elite NG!");
       await refreshRoles();
-      navigate(parsed.data.role === "brand" ? "/onboarding/brand" : "/onboarding/model", { replace: true });
+      navigate(interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (parsed.data.role === "brand" ? "/onboarding/brand" : "/onboarding/model"), { replace: true });
     }
     setLoading(false);
   };
