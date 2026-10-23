@@ -26,6 +26,7 @@ const Auth = () => {
   const [params] = useSearchParams();
   const initialRole = (params.get("role") === "brand" ? "brand" : "model") as "model" | "brand";
   const allowedIntents = ["start-earning", "earn-from-home", "work-from-home", "student-support", "soft-loan-enquiry", "become-model", "book-talent", "elite-media-free-trial", "elite-highlight-launch-pack", "elite-creator-starter", "elite-creator-pro", "elite-agency-workspace", "elite-agency-production-retainer"] as const;
+  const hasExplicitIntent = params.has("intent");
   const requestedIntent = params.get("intent") ?? "become-model";
   const interestIntent = (allowedIntents as readonly string[]).includes(requestedIntent) ? requestedIntent : "become-model";
   const intentLabels: Record<string, string> = {
@@ -61,9 +62,14 @@ const Auth = () => {
   useEffect(() => {
     if (resetMode || !user || roles.length === 0) return;
     let cancelled = false;
-    const destination = interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model");
+    let destination = interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model");
 
     const continueSignedInUser = async () => {
+      if (!hasExplicitIntent && !interestIntent.startsWith("elite-")) {
+        const { data: existingMediaRequests } = await supabase.from("elite_media_requests").select("id").eq("user_id", user.id).limit(1);
+        if (cancelled) return;
+        if (existingMediaRequests?.length) destination = "/dashboard/elite-media";
+      }
       if (interestIntent.startsWith("elite-") && handledEliteIntent.current !== user.id + ":" + interestIntent) {
         handledEliteIntent.current = user.id + ":" + interestIntent;
         const { error } = await supabase.functions.invoke("elite-media-request", {
@@ -84,7 +90,7 @@ const Auth = () => {
 
     void continueSignedInUser();
     return () => { cancelled = true; };
-  }, [user, roles, navigate, resetMode, interestIntent]);
+  }, [user, roles, navigate, resetMode, interestIntent, hasExplicitIntent]);
 
   const onSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
