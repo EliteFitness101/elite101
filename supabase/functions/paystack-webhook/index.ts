@@ -33,8 +33,8 @@ if(event.event==="subscription.create"){
  }
  return json({received:true,elite_subscription:"processed"});
 }
-if(event.event==="subscription.disable"||event.event==="invoice.payment_failed"){
- const status=event.event==="subscription.disable"?"cancelled":"past_due";
+if(event.event==="subscription.disable"||event.event==="subscription.not_renew"||event.event==="invoice.payment_failed"){
+ const status=(event.event==="subscription.disable"||event.event==="subscription.not_renew")?"cancelled":"past_due";
  if(eliteSubscriptionCode){const {data:c,error}=await eliteAdmin.from("elite_media_checkouts").select("reference,metadata").eq("paystack_subscription_code",eliteSubscriptionCode).maybeSingle();if(error)throw error;if(c){await eliteAdmin.from("elite_media_checkouts").update({status,metadata:{...(c.metadata??{}),subscription_status:status},updated_at:new Date().toISOString()}).eq("reference",c.reference);}}
  return json({received:true,elite_subscription_status:status});
 }
