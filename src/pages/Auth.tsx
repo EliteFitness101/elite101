@@ -177,14 +177,22 @@ const Auth = () => {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: parsed.data.email,
-      password: parsed.data.password,
-    });
-    if (error) {
-      toast.error(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: parsed.data.email,
+        password: parsed.data.password,
+      });
+      if (error) {
+        toast.error(error.message === "Invalid login credentials"
+          ? "Email or password is incorrect. If you just registered, verify your email first or use Forgot password."
+          : error.message);
+      }
+    } catch (error) {
+      console.error("[auth] signin request failed", error);
+      toast.error("Could not reach the account service. Check your connection and retry.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
