@@ -124,7 +124,7 @@ function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstim
         <span className="text-sm text-white/45">/{offer.period}</span>
       </div>
       <p className="mt-2 text-sm font-medium text-white/75">{ngnEstimate !== undefined ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(ngnEstimate) : "NGN estimate unavailable"}</p>
-      <p className="mt-1 text-xs text-white/45">{fxUpdatedAt ? `Indicative FX quote updated ${new Date(fxUpdatedAt).toLocaleString()}. Final payment amount is not yet enabled.` : "No hardcoded FX rate. Live quote is required for an NGN estimate."}</p>
+      <p className="mt-1 text-xs text-white/45">{fxUpdatedAt ? `Indicative FX quote updated ${new Date(fxUpdatedAt).toLocaleString()}. Final NGN amount is confirmed at secure checkout.` : "No hardcoded FX rate. Live quote is required for an NGN estimate."}</p>
       <div className="my-6 h-px bg-white/10" />
       <p className="mb-4 text-sm font-medium text-white/80">Designed for: {offer.audience}</p>
       <ul className="mb-7 flex-1 space-y-3">
@@ -182,7 +182,7 @@ function PricingPage() {
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Choose your next step: <span className="elite-gold-text">trial or plan.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Try the free 7-day pilot first, choose a creator plan, or request managed production when you are ready.</p></div>
-          <p className="max-w-xs text-xs leading-5 text-white/45">Live NGN estimates use a timestamped FX quote. Paid checkout and recurring billing are not yet enabled.</p>
+          <p className="max-w-xs text-xs leading-5 text-white/45">Live NGN estimates are indicative. Secure Paystack checkout confirms the exact NGN amount before authorization; monthly plans renew automatically until cancelled.</p>
         </div>
 
         <div id="trial" className="elite-glass mb-8 scroll-mt-24 overflow-hidden rounded-[1.8rem] border border-[#e9c979]/30 p-6 sm:p-8 md:p-10">
