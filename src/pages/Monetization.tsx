@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useParams } from "react-router-dom";
 import * as Accordion from "@radix-ui/react-accordion";
