@@ -1,123 +1,81 @@
-// Paystack webhook — verifies HMAC signature, updates booking, forwards to Make.com,
-// and sends a Telegram notification. Public endpoint (no JWT); security via x-paystack-signature.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-paystack-signature",
-};
-
-const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/p0c26asklninfrxhp2sw6nkdjjb19a89";
-const TELEGRAM_GATEWAY = "https://connector-gateway.lovable.dev/telegram";
-
-async function hmacSha512Hex(secret: string, message: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-512" }, false, ["sign"],
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(message));
-  return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+async function hmacSha512(body:string,secret:string){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-512"},false,["sign"]);const sig=await crypto.subtle.sign("HMAC",key,new TextEncoder().encode(body));return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,"0")).join("");}
+async function sha256(value:string){const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");}
+function constantTimeEqual(a:string,b:string){if(a.length!==b.length)return false;let mismatch=0;for(let i=0;i<a.length;i++)mismatch|=a.charCodeAt(i)^b.charCodeAt(i);return mismatch===0;}
+async function sendTikTokPurchase(args:{reference:string;email:string;ttclid?:string|null;amount:number;currency:string;sku:string;productName:string}){
+  const token=Deno.env.get("TIKTOK_EVENTS_API_ACCESS_TOKEN")??Deno.env.get("TIKTOK_EVENTS_API_TOKEN")??"";
+  const pixelId=Deno.env.get("TIKTOK_PIXEL_ID")??"D9MAQ0BC77U97D5Q2QJG";
+  const eventId=`paystack:${args.reference}`;
+  const user:Record<string,unknown>={email:await sha256(args.email.trim().toLowerCase())};
+  if(args.ttclid)user.ttclid=args.ttclid;
+  const payload={event_source:"web",event_source_id:pixelId,data:[{event:"Purchase",event_time:Math.floor(Date.now()/1000),event_id:eventId,user,page:{url:"https://www.resofit.fit/shop"},properties:{currency:args.currency,value:args.amount,content_type:"product",content_ids:[args.sku],contents:[{content_id:args.sku,content_name:args.productName,quantity:1,price:args.amount}]}}]};
+  if(!token){console.error("TikTok Events API: missing TIKTOK_EVENTS_API_ACCESS_TOKEN");return{sent:false,reason:"missing_token",payload};}
+  try{
+    const response=await fetch("https://business-api.tiktok.com/open_api/v1.3/event/track/",{method:"POST",headers:{"Content-Type":"application/json","Access-Token":token},body:JSON.stringify(payload)});
+    const responseBody=await response.text();let parsed:any=null;try{parsed=JSON.parse(responseBody)}catch{}
+    if(!response.ok||!parsed||parsed.code!==0){console.error("TikTok Events API rejected Purchase",{httpStatus:response.status,code:parsed?.code??null,message:parsed?.message??null,reference:args.reference});return{sent:false,reason:"tiktok_rejected",httpStatus:response.status,code:parsed?.code??null,payload};}
+    console.info("TikTok Events API accepted Purchase",{httpStatus:response.status,code:parsed.code,requestId:parsed.request_id??null,eventId,reference:args.reference});return{sent:true,eventId};
+  }catch(error){console.error("TikTok Events API request failed",{reference:args.reference,error:String(error)});return{sent:false,reason:"request_failed",payload};}
 }
-
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
+Deno.serve(async(req)=>{if(req.method==="OPTIONS")return new Response(null,{status:204});if(req.method!=="POST")return json({error:"Method not allowed"},405);const bodyText=await req.text();try{const signature=req.headers.get("x-paystack-signature")??"";const secret=Deno.env.get("PAYSTACK_SECRET_KEY")??"";if(!secret||!secret.startsWith("sk_live_"))return json({error:"Production Paystack live secret is required"},500);const expected=await hmacSha512(bodyText,secret);if(!constantTimeEqual(signature,expected))return json({error:"Invalid signature"},401);const event=JSON.parse(bodyText);
+const eliteAdmin=createClient(Deno.env.get("SUPABASE_URL")??"",Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"",{auth:{persistSession:false}});
+const eliteData=event?.data??{};
+const eliteSubscriptionCode=String(eliteData?.subscription_code??eliteData?.subscription?.subscription_code??"").trim();
+const elitePlanCode=String(eliteData?.plan?.plan_code??eliteData?.plan_code??eliteData?.subscription?.plan?.plan_code??"").trim();
+const eliteEmail=String(eliteData?.customer?.email??eliteData?.email??eliteData?.subscription?.customer?.email??"").trim().toLowerCase();
+if(event.event==="subscription.create"){
+ if(eliteSubscriptionCode&&elitePlanCode&&eliteEmail){
+  const {data:c,error}=await eliteAdmin.from("elite_media_checkouts").select("reference,metadata").eq("email",eliteEmail).eq("paystack_plan_code",elitePlanCode).in("status",["pending","paid","active"]).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(error)throw error;
+  if(c){const now=new Date().toISOString();const meta={...(c.metadata??{}),paystack_subscription_code:eliteSubscriptionCode,subscription_status:"active"};const {error:e}=await eliteAdmin.from("elite_media_checkouts").update({paystack_subscription_code:eliteSubscriptionCode,status:"active",metadata:meta,updated_at:now}).eq("reference",c.reference);if(e)throw e;const {data:s}=await eliteAdmin.from("resoflex_subscribers").select("metadata").eq("reference",c.reference).maybeSingle();if(s)await eliteAdmin.from("resoflex_subscribers").update({metadata:{...(s.metadata??{}),paystack_subscription_code:eliteSubscriptionCode,subscription_status:"active"},updated_at:now}).eq("reference",c.reference);}
+ }
+ return json({received:true,elite_subscription:"processed"});
 }
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
-  try {
-    const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET_KEY");
-    if (!PAYSTACK_SECRET) throw new Error("PAYSTACK_SECRET_KEY not configured");
-
-    const signature = req.headers.get("x-paystack-signature") ?? "";
-    const body = await req.text();
-    const expected = await hmacSha512Hex(PAYSTACK_SECRET, body);
-
-    if (!signature || !safeEqual(expected, signature)) {
-      console.warn("paystack-webhook: signature mismatch");
-      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
-    }
-
-    const event = JSON.parse(body);
-    console.log(`[ResoFlex] paystack event: ${event.event}`);
-
-    // Forward verified event to Make.com (fire-and-forget; don't block Paystack response).
-    forwardToMake(body).catch((e) => console.error("make.com forward error:", e));
-
-    if (event.event === "charge.success") {
-      const { email, reference, amount, metadata } = event.data ?? {};
-      const sku = metadata?.sku || "RFX-DG-INT-33D";
-      const amountNgn = amount ? amount / 100 : 0;
-      console.log(`[ResoFlex] Payment Verified for: ${email} | ref: ${reference} | SKU: ${sku}`);
-
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      );
-
-      if (reference) {
-        const { data: booking, error } = await supabase
-          .from("bookings").update({ status: "paid" })
-          .eq("paystack_ref", reference).select().maybeSingle();
-        if (error) console.error("booking update error:", error);
-        else if (booking) await triggerInitiationBot(email, sku, booking, amountNgn);
-        else {
-          console.warn(`No booking found for ref ${reference} — sending generic Telegram alert`);
-          await sendTelegram(`💸 <b>Paystack payment</b>\nRef: <code>${reference}</code>\nAmount: ₦${amountNgn.toLocaleString()}\nEmail: ${email}\nSKU: ${sku}\n(no matching booking)`);
-        }
-      }
-    }
-
-    return new Response("Success", { status: 200, headers: corsHeaders });
-  } catch (e) {
-    console.error("paystack-webhook error:", e);
-    return new Response("Error logged", { status: 200, headers: corsHeaders });
-  }
-});
-
-async function forwardToMake(rawBody: string) {
-  const res = await fetch(MAKE_WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: rawBody,
+if(event.event==="subscription.disable"||event.event==="invoice.payment_failed"){
+ const status=event.event==="subscription.disable"?"cancelled":"past_due";
+ if(eliteSubscriptionCode){const {data:c,error}=await eliteAdmin.from("elite_media_checkouts").select("reference,metadata").eq("paystack_subscription_code",eliteSubscriptionCode).maybeSingle();if(error)throw error;if(c){await eliteAdmin.from("elite_media_checkouts").update({status,metadata:{...(c.metadata??{}),subscription_status:status},updated_at:new Date().toISOString()}).eq("reference",c.reference);}}
+ return json({received:true,elite_subscription_status:status});
+}
+if(event.event==="charge.success"&&typeof eliteData?.reference==="string"){
+ const {data:initial}=await eliteAdmin.from("resoflex_subscribers").select("reference").eq("reference",eliteData.reference).maybeSingle();
+ if(!initial){
+  let {data:c,error}=eliteSubscriptionCode?await eliteAdmin.from("elite_media_checkouts").select("reference,email,amount_ngn,offer_name,offer_slug,metadata,status").eq("paystack_subscription_code",eliteSubscriptionCode).maybeSingle():{data:null,error:null};
+  if(error)throw error;
+  if(!c&&elitePlanCode&&eliteEmail){const q=await eliteAdmin.from("elite_media_checkouts").select("reference,email,amount_ngn,offer_name,offer_slug,metadata,status").eq("paystack_plan_code",elitePlanCode).eq("email",eliteEmail).in("status",["active","paid"]).order("created_at",{ascending:false}).limit(1).maybeSingle();c=q.data;if(q.error)throw q.error;}
+  if(c){const amount=Number(eliteData.amount),expected=Number(c.amount_ngn)*100;if(eliteData.status!=="success"||eliteData.currency!=="NGN"||amount!==expected||String(eliteData.customer?.email??"").trim().toLowerCase()!==c.email)return json({error:"Elite renewal payment verification mismatch"},422);const now=new Date().toISOString();const {data:s}=await eliteAdmin.from("resoflex_subscribers").select("rsid,user_id").eq("reference",c.reference).maybeSingle();const {error:e}=await eliteAdmin.from("payments").upsert({user_id:s?.user_id??null,amount:amount/100,currency:"NGN",status:"success",plan_type:c.offer_name,paystack_ref:String(eliteData.reference),rsid:String(s?.rsid??c.reference),customer_email:c.email,product_sku:"ELITE-"+String(c.offer_slug).toUpperCase(),funnel_origin:"elite_media",gross_amount:amount,gateway_fee:Math.max(0,Number(eliteData.fees??0)),net_amount:Math.max(0,amount-Number(eliteData.fees??0)),settlement_status:"pending",reconciled:false,paid_at:eliteData.paid_at??now,metadata:{...(c.metadata??{}),renewal:true,paystack_subscription_code:eliteSubscriptionCode||c.metadata?.paystack_subscription_code}},{onConflict:"paystack_ref"});if(e)throw e;await eliteAdmin.from("elite_media_checkouts").update({status:"active",paid_at:eliteData.paid_at??now,updated_at:now}).eq("reference",c.reference);return json({received:true,elite_renewal:"recorded"});}
+ }
+}const reference=typeof event?.data?.reference==="string"?event.data.reference.trim():null;if(!reference)return json({received:true});const admin=createClient(Deno.env.get("SUPABASE_URL")??"",Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"");const eventType=String(event.event??"unknown");const{data:processing,error:processingLookupError}=await admin.from("payment_event_processing").select("id,status,attempt_count").eq("paystack_ref",reference).eq("event_key",eventType).maybeSingle();if(processingLookupError)throw processingLookupError;if(processing?.status==="completed")return json({received:true,duplicate:true});let processingId:string;if(processing){processingId=processing.id;const{error}=await admin.from("payment_event_processing").update({status:"processing",attempt_count:Number(processing.attempt_count??0)+1,last_error:null,updated_at:new Date().toISOString()}).eq("id",processingId);if(error)throw error;}else{const{data:createdProcessing,error:processingInsertError}=await admin.from("payment_event_processing").insert({paystack_ref:reference,event_key:eventType,event_type:eventType,status:"processing",attempt_count:1,updated_at:new Date().toISOString()}).select("id").single();if(processingInsertError){if(processingInsertError.code!=="23505")throw processingInsertError;const{data:raceRow,error:raceError}=await admin.from("payment_event_processing").select("id,status,attempt_count").eq("paystack_ref",reference).eq("event_key",eventType).single();if(raceError)throw raceError;if(raceRow.status==="completed")return json({received:true,duplicate:true});processingId=raceRow.id;const{error}=await admin.from("payment_event_processing").update({status:"processing",attempt_count:Number(raceRow.attempt_count??0)+1,last_error:null,updated_at:new Date().toISOString()}).eq("id",processingId);if(error)throw error;}else processingId=createdProcessing.id;}const{data:existingEvent,error:eventLookupError}=await admin.from("payment_events").select("id").eq("paystack_ref",reference).eq("event",eventType).maybeSingle();if(eventLookupError)throw eventLookupError;if(!existingEvent){const{error:eventInsertError}=await admin.from("payment_events").insert({paystack_ref:reference,event:eventType,payload:event,processed:false,signature_verified:true,source:"paystack"});if(eventInsertError)throw eventInsertError;}if(event.event==="charge.success"){const data=event.data??{},metadata=data.metadata??{};const isResoFitCheckout=metadata.checkout_channel==="paystack_direct"||typeof metadata.sku==="string";if(!isResoFitCheckout){const{error:ignoredCompleteError}=await admin.from("payment_event_processing").update({status:"completed",processed_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_error:null}).eq("id",processingId);if(ignoredCompleteError)throw ignoredCompleteError;return json({received:true,ignored:true});}const{subscriber,error:subscriberError}=await (async()=>{const r=await admin.from("resoflex_subscribers").select("id,rsid,email,product_id,product_name,amount_paid,payment_status,user_id,metadata").eq("reference",reference).maybeSingle();return{subscriber:r.data,error:r.error}})();if(subscriberError)throw subscriberError;if(!subscriber)return json({error:"Order context not found; retry required"},500);const expectedKobo=Math.round(Number(subscriber.amount_paid)*100),receivedKobo=Number(data.amount),customerEmail=String(data.customer?.email??"").trim().toLowerCase(),emailMatches=!customerEmail||customerEmail===String(subscriber.email).trim().toLowerCase();if(data.status!=="success"||data.currency!=="NGN"||!Number.isFinite(receivedKobo)||receivedKobo!==expectedKobo||!emailMatches)return json({error:"Payment verification mismatch; retry required"},422);const paidAt=data.paid_at??new Date().toISOString(),email=customerEmail||subscriber.email,now=new Date().toISOString(),gatewayFeeKobo=Math.max(0,Number(data.fees??0)),netKobo=Math.max(0,receivedKobo-gatewayFeeKobo);const{subscriberUpdateError}=await (async()=>({subscriberUpdateError:(await admin.from("resoflex_subscribers").update({payment_status:"success",updated_at:now}).eq("id",subscriber.id).neq("payment_status","success")).error}))();if(subscriberUpdateError)throw subscriberUpdateError;const{error:paymentError}=await admin.from("payments").upsert({user_id:subscriber.user_id??null,amount:receivedKobo/100,currency:"NGN",status:"success",plan_type:subscriber.product_name,paystack_ref:reference,rsid:subscriber.rsid,customer_email:email,product_sku:subscriber.product_id,funnel_origin:metadata.funnel_origin??"resoflex_shop",gross_amount:receivedKobo,gateway_fee:gatewayFeeKobo,net_amount:netKobo,paid_at:paidAt,gateway_response:data.gateway_response??null,reconciled:true,reconciled_at:now,settlement_status:"pending",metadata:{...metadata,ledger_units:{amount:"NGN",gross_amount:"kobo",gateway_fee:"kobo",net_amount:"kobo"}}},{onConflict:"paystack_ref"});if(paymentError)throw paymentError;
+if(metadata.checkout_channel==="elite_media_paystack"){
+ const {error:eliteCheckoutUpdateError}=await admin.from("elite_media_checkouts").update({status:metadata.billing_interval==="monthly"?"paid":"paid",paid_at:paidAt,updated_at:now}).eq("reference",reference);
+ if(eliteCheckoutUpdateError)throw eliteCheckoutUpdateError;
+}
+const{error:revenueError}=await admin.from("revenue_events").upsert({payment_reference:reference,amount:receivedKobo/100,currency:"NGN",email,product_slug:subscriber.product_id,rsid:subscriber.rsid,status:"success",campaign:metadata.utm_campaign??metadata.campaign??null,utm:{source:metadata.utm_source??null,medium:metadata.utm_medium??null,campaign:metadata.utm_campaign??null,term:metadata.utm_term??null,content:metadata.utm_content??null}},{onConflict:"payment_reference"});if(revenueError)throw revenueError;
+// Close the existing attribution chain on verified Paystack success.
+const attributionFilter=admin.from("campaign_attribution").update({
+  order_id:reference,
+  revenue_ngn:receivedKobo/100,
+  contribution_margin_ngn:metadata.gross_margin_ngn??null
+}).eq("checkout_id",reference);
+const {error:attributionUpdateError}=await attributionFilter;
+if(attributionUpdateError)throw attributionUpdateError;
+const {data:existingConversion,error:conversionLookupError}=await admin.from("conversion_events")
+  .select("id").eq("event_name","purchase").eq("order_id",reference).maybeSingle();
+if(conversionLookupError)throw conversionLookupError;
+if(!existingConversion){
+  const {error:conversionError}=await admin.from("conversion_events").insert({
+    event_name:"purchase",
+    session_id:typeof metadata.session_id==="string"?metadata.session_id:null,
+    anonymous_id:null,
+    user_id:subscriber.user_id??null,
+    recommendation_id:null,
+    product_id:subscriber.product_id,
+    checkout_id:reference,
+    order_id:reference,
+    value_ngn:receivedKobo/100,
+    metadata:{rsid:subscriber.rsid,utm:{source:metadata.utm_source??null,medium:metadata.utm_medium??null,campaign:metadata.utm_campaign??null,term:metadata.utm_term??null,content:metadata.utm_content??null},funnel_origin:metadata.funnel_origin??"resoflex_shop"},
+    occurred_at:paidAt
   });
-  console.log(`[ResoFlex] make.com -> ${res.status}`);
-  await res.text();
-}
-
-async function sendTelegram(text: string) {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY");
-  const chatId = Deno.env.get("TELEGRAM_CHAT_ID");
-  if (!LOVABLE_API_KEY || !TELEGRAM_API_KEY || !chatId) {
-    console.warn("Telegram not fully configured — skipping notification");
-    return;
-  }
-  const res = await fetch(`${TELEGRAM_GATEWAY}/sendMessage`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": TELEGRAM_API_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML" }),
-  });
-  const txt = await res.text();
-  if (!res.ok) console.error(`telegram send failed [${res.status}]: ${txt}`);
-}
-
-async function triggerInitiationBot(email: string, sku: string, booking: any, amountNgn: number) {
-  const msg =
-    `✅ <b>Booking Paid</b>\n` +
-    `Booking: <code>${booking.id}</code>\n` +
-    `Amount: ₦${amountNgn.toLocaleString()}\n` +
-    `Commission: ₦${Number(booking.commission_ngn ?? 0).toLocaleString()}\n` +
-    `SKU: ${sku}\n` +
-    `Buyer: ${email}\n` +
-    `Ref: <code>${booking.paystack_ref}</code>`;
-  await sendTelegram(msg);
-}
+  if(conversionError)throw conversionError;
+}const{error:eventLedgerError}=await admin.from("resofit_events").upsert({event_name:"payment.succeeded",contract_version:"1.0",occurred_at:paidAt,source_system:"paystack-webhook",adapter:"paystack",idempotency_key:`paystack:payment.succeeded:${reference}`,correlation_id:subscriber.rsid??reference,rsid:subscriber.rsid??null,funnel_origin:metadata.funnel_origin??"resoflex_shop",utm:{source:metadata.utm_source??null,medium:metadata.utm_medium??null,campaign:metadata.utm_campaign??null,term:metadata.utm_term??null,content:metadata.utm_content??null},payload:{payment_reference:reference,amount:receivedKobo/100,currency:data.currency,product_sku:subscriber.product_id,product_name:subscriber.product_name,customer_email:email,gateway_response:data.gateway_response??null}},{onConflict:"idempotency_key"});if(eventLedgerError)throw eventLedgerError;if(metadata.upsell===true&&typeof metadata.productId==="string"){const{data:upsellSubscriber,error:upsellLookupError}=await admin.from("resoflex_subscribers").select("id").eq("rsid",metadata.rsid??"").maybeSingle();if(upsellLookupError)throw upsellLookupError;if(upsellSubscriber){const{error:upsellError}=await admin.from("resoflex_upsells").update({payment_status:"success",amount_paid:receivedKobo,paystack_ref:reference}).eq("subscriber_id",upsellSubscriber.id).eq("product_id",metadata.productId).neq("payment_status","success");if(upsellError)throw upsellError;}}const tiktokResult=await sendTikTokPurchase({reference,email,ttclid:typeof metadata.ttclid==="string"?metadata.ttclid:null,amount:receivedKobo/100,currency:String(data.currency??"NGN"),sku:String(subscriber.product_id??""),productName:String(subscriber.product_name??"")});if(!tiktokResult.sent){const requestId=`tiktok:purchase:${reference}`;const{error:queueError}=await admin.from("payment_event_queue").upsert({request_id:requestId,event_type:"tiktok_purchase",paystack_reference:reference,payload:tiktokResult.payload??{},status:"pending",attempts:0,last_error:String(tiktokResult.reason??"tiktok_delivery_failed")},{onConflict:"request_id",ignoreDuplicates:true});if(queueError)console.error("TikTok retry queue persistence failed",{reference,error:queueError.message});else console.warn("TikTok Purchase queued for ChatB2K retry",{reference,reason:tiktokResult.reason??"unknown"});}}const{error:processedError}=await admin.from("payment_event_processing").update({status:"completed",processed_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_error:null}).eq("id",processingId);if(processedError)throw processedError;return json({received:true});}catch(error){console.error("Webhook processing failed",error);return json({error:"Webhook processing failed"},500);}});
