@@ -24,6 +24,7 @@ import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
 import Questionnaire from "./pages/Questionnaire";
 import Monetization from "./pages/Monetization";
+import EliteCheckout from "./pages/EliteCheckout";
 import BrandGrowth from "./pages/BrandGrowth";
 const Explore = lazy(() => import("./pages/Explore"));
 const ChatB2KConcierge = lazy(() => import("@/components/ChatB2KConcierge").then((module) => ({ default: module.ChatB2KConcierge })));
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
             <Route path="/monetization" element={<Monetization />} />
+            <Route path="/checkout" element={<EliteCheckout />} />
             <Route path="/brand-growth" element={<BrandGrowth />} />
             <Route path="/offers/:slug" element={<Monetization />} />
 
