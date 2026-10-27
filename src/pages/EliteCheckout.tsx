@@ -114,7 +114,7 @@ export default function EliteCheckout() {
                   <div className="mt-7">
                     <p className="text-sm text-white/55">Exact amount to authorize</p>
                     <p className="mt-2 text-4xl font-semibold text-[#f4d58b]">{currency.format(prepared.amount_ngn)}<span className="ml-2 text-sm font-normal text-white/50">{offer.interval === "monthly" ? "/ month" : "one time"}</span></p>
-                    <p className="mt-3 text-xs leading-5 text-white/45">The NGN amount is based on a timestamped FX quote. {offer.interval === "monthly" ? "This fixed NGN amount is used for future monthly renewals unless the subscription is changed or cancelled." : "This is a one-time charge."}</p>
+                    <p className="mt-3 text-xs leading-5 text-white/45">The NGN amount is based on a timestamped FX quote. {prepared.fx_source_updated_at ? `Quote updated ${new Date(prepared.fx_source_updated_at).toLocaleString()}. ` : ""}{offer.interval === "monthly" ? "This fixed NGN amount is used for future monthly renewals unless the subscription is changed or cancelled." : "This is a one-time charge."}</p>
                     <button onClick={() => window.location.assign(prepared.authorization_url)} className="elite-cta mt-6 flex h-12 w-full items-center justify-center rounded-full font-semibold">Continue to Paystack <ArrowRight className="ml-2 h-4 w-4" /></button>
                     <button onClick={() => setPrepared(null)} className="mt-4 w-full text-sm text-white/45 hover:text-white">Change details</button>
                   </div>
