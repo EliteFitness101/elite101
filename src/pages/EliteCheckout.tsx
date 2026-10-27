@@ -91,6 +91,7 @@ export default function EliteCheckout() {
               <p className="mt-4 text-sm leading-7 text-white/60">Your return from Paystack is not by itself proof of payment. We confirm payment from the verified payment event.</p>
               <div className="elite-glass mt-7 rounded-3xl p-6">
                 {paymentStatus?.status === "paid" || paymentStatus?.status === "active" ? <><CheckCircle2 className="h-8 w-8 text-[#e9c979]" /><h2 className="mt-4 text-xl font-semibold">Payment confirmed</h2><p className="mt-2 text-sm text-white/60">{paymentStatus.offer_name} · {currency.format(paymentStatus.amount_ngn)} {paymentStatus.billing_interval === "monthly" ? "per month" : "one time"}.</p></> : <><LoaderCircle className="h-8 w-8 animate-spin text-[#e9c979]" /><h2 className="mt-4 text-xl font-semibold">{paymentStatus?.status === "failed" ? "Payment was not completed" : "Confirming your payment"}</h2><p className="mt-2 text-sm leading-6 text-white/60">{checkingStatus ? "Waiting for the verified Paystack confirmation…" : "The payment is not yet confirmed. If you completed payment, wait briefly and refresh this page."}</p>{paymentStatus?.status === "pending" && <p className="mt-3 text-xs text-white/40">Reference: {returnedReference}</p>}</>}
+                <p className="mt-5 break-all text-xs text-white/40">Payment reference: {returnedReference}</p>
                 <Link to="/monetization" className="mt-6 inline-flex items-center gap-2 text-sm text-[#f4d58b]">Return to offers <ArrowRight className="h-4 w-4" /></Link>
               </div>
             </div>
