@@ -145,7 +145,7 @@ function PricingPage() {
   const [fxError, setFxError] = useState(false);
   useEffect(() => {
     let active = true;
-    supabase.functions.invoke("elite-media-fx-quote").then(({ data, error }) => {
+    supabase.functions.invoke("elite-media-fx-quote", { method: "GET" }).then(({ data, error }) => {
       if (!active) return;
       if (error || !data?.offers || !Array.isArray(data.offers)) { setFxError(true); return; }
       const next: Record<string, { estimated_ngn: number; fx_source_updated_at: string }> = {};
