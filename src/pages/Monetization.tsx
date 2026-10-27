@@ -98,7 +98,7 @@ const faqs = [
   { q: "Are these prices final?", a: "These are launch-test prices. The exact clip count, delivery window, storage allowance, revision policy, applicable taxes, and any local-currency amount must be confirmed on the order before payment." },
   { q: "Do you automatically capture and publish my livestreams?", a: "Only integrations explicitly shown as available in your account should be treated as automated. Early production packages can use media you provide or explicitly authorize, with manual review and delivery where needed." },
   { q: "Can I use Elite Ng from Nigeria and internationally?", a: "The offer is designed for Nigerian and international creators. Checkout currency, payment methods, settlement eligibility, and taxes are confirmed by the enabled payment provider at checkout." },
-  { q: "Can I cancel a subscription?", a: "Subscription terms and cancellation instructions should be displayed before payment. Cancel according to the billing terms attached to the selected plan; cancellation does not erase amounts already due for completed services." },
+  { q: "Can I cancel a subscription?", a: "Monthly plans renew automatically. Open Manage subscription in the footer, enter the checkout email and payment reference, then review or cancel through Paystack’s secure management page. Cancellation stops future renewals; any already-paid period remains subject to the provider’s subscription status." },
   { q: "What content can I submit?", a: "Submit only media you own or are authorized to process. You remain responsible for the necessary creator, platform, music, and third-party permissions." },
 ];
 
