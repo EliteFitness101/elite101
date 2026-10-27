@@ -23,7 +23,7 @@ Deno.serve(async(req)=>{if(req.method==="OPTIONS")return new Response(null,{stat
 const eliteAdmin=createClient(Deno.env.get("SUPABASE_URL")??"",Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??"",{auth:{persistSession:false}});
 const eliteData=event?.data??{};
 const eliteSubscriptionCode=String(eliteData?.subscription_code??eliteData?.subscription?.subscription_code??"").trim();
-const elitePlanCode=String(eliteData?.plan?.plan_code??(typeof eliteData?.plan==="string"?eliteData.plan:"")??eliteData?.plan_code??eliteData?.subscription?.plan?.plan_code??"").trim();
+const elitePlanCode=String(eliteData?.plan?.plan_code||(typeof eliteData?.plan==="string"?eliteData.plan:"")||eliteData?.plan_code||eliteData?.subscription?.plan?.plan_code||"").trim();
 const eliteEmail=String(eliteData?.customer?.email??eliteData?.email??eliteData?.subscription?.customer?.email??"").trim().toLowerCase();
 if(event.event==="subscription.create"){
  if(eliteSubscriptionCode&&elitePlanCode&&eliteEmail){
