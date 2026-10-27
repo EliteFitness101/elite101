@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Link, useParams } from "react-router-dom";
 import * as Accordion from "@radix-ui/react-accordion";
 import { motion } from "framer-motion";
@@ -114,7 +115,7 @@ function OfferButton({ offer }: { offer: Offer }) {
   );
 }
 
-function OfferCard({ offer }: { offer: Offer }) {
+function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstimate?: number; fxUpdatedAt?: string }) {
   return (
     <article className={`elite-offer-card relative flex h-full flex-col rounded-[1.7rem] p-6 md:p-7 ${offer.popular ? "elite-offer-featured" : ""}`}>
       {offer.popular && <span className="elite-pill absolute right-5 top-5"><Sparkles className="h-3 w-3" /> MOST POPULAR</span>}
@@ -125,7 +126,8 @@ function OfferCard({ offer }: { offer: Offer }) {
         <span className="text-4xl font-semibold tracking-tight text-[#f4d58b]">{formatUsd(offer.price)}</span>
         <span className="text-sm text-white/45">/{offer.period}</span>
       </div>
-      <p className="mt-2 text-xs text-white/45">Listed in USD for global customers. Confirm the final charge currency and amount before paying.</p>
+      <p className="mt-2 text-sm font-medium text-white/75">{ngnEstimate !== undefined ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(ngnEstimate) : "NGN estimate unavailable"}</p>
+      <p className="mt-1 text-xs text-white/45">{fxUpdatedAt ? `Indicative FX quote updated ${new Date(fxUpdatedAt).toLocaleString()}. Final payment amount is not yet enabled.` : "No hardcoded FX rate. Live quote is required for an NGN estimate."}</p>
       <div className="my-6 h-px bg-white/10" />
       <p className="mb-4 text-sm font-medium text-white/80">Designed for: {offer.audience}</p>
       <ul className="mb-7 flex-1 space-y-3">
@@ -139,10 +141,19 @@ function OfferCard({ offer }: { offer: Offer }) {
 }
 
 function PricingPage() {
-  const [billing, setBilling] = useState<"monthly" | "annual">("monthly");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const subscriptions = offers.filter((offer) => ["creator-starter", "creator-pro", "agency-workspace"].includes(offer.slug));
-  const monthlyPrice = (offer: Offer) => billing === "annual" ? offer.price * 10 : offer.price;
+  const [fxQuotes, setFxQuotes] = useState<Record<string, { estimated_ngn: number; fx_source_updated_at: string }>>({});
+  const [fxError, setFxError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    supabase.functions.invoke("elite-media-fx-quote").then(({ data, error }) => {
+      if (!active) return;
+      if (error || !data?.offers || !Array.isArray(data.offers)) { setFxError(true); return; }
+      const next: Record<string, { estimated_ngn: number; fx_source_updated_at: string }> = {};
+      for (const quote of data.offers) if (typeof quote.slug === "string" && Number.isFinite(quote.estimated_ngn) && typeof quote.fx_source_updated_at === "string") next[quote.slug] = { estimated_ngn: quote.estimated_ngn, fx_source_updated_at: quote.fx_source_updated_at };
+      setFxQuotes(next);
+    }).catch(() => { if (active) setFxError(true); });
+    return () => { active = false; };
+  }, []);
   return (
     <main className="elite-page min-h-screen overflow-hidden text-white">
       <Navbar />
@@ -174,12 +185,9 @@ function PricingPage() {
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Choose your next step: <span className="elite-gold-text">trial or plan.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Try the free 7-day pilot first, choose a creator plan, or request managed production when you are ready.</p></div>
-          <div className="elite-glass inline-flex w-fit rounded-full p-1" role="group" aria-label="Subscription billing view">
-            <button onClick={() => setBilling("monthly")} className={`rounded-full px-4 py-2 text-xs font-medium transition ${billing === "monthly" ? "bg-[#e9c979] text-black" : "text-white/60"}`}>Monthly</button>
-            <button onClick={() => setBilling("annual")} className={`rounded-full px-4 py-2 text-xs font-medium transition ${billing === "annual" ? "bg-[#e9c979] text-black" : "text-white/60"}`}>Annual · 2 months free</button>
-          </div>
+          <p className="max-w-xs text-xs leading-5 text-white/45">Live NGN estimates use a timestamped FX quote. Paid checkout and recurring billing are not yet enabled.</p>
         </div>
-        {billing === "annual" && <p className="mb-5 text-xs text-[#f4d58b]/80">Illustrative annual billing: 10 monthly payments’ worth charged per year. Enable only after annual billing is configured in checkout.</p>}
+
         <div id="trial" className="elite-glass mb-8 scroll-mt-24 overflow-hidden rounded-[1.8rem] border border-[#e9c979]/30 p-6 sm:p-8 md:p-10">
           <div className="grid gap-7 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
             <div>
@@ -200,11 +208,12 @@ function PricingPage() {
             </div>
           </div>
         </div>
+        {fxError && <p role="status" className="mb-5 text-sm text-white/60">Live FX is temporarily unavailable. No hardcoded NGN estimate is shown; USD prices remain visible.</p>}
         <div className="grid gap-4 lg:grid-cols-3">
-          {subscriptions.map((offer) => <OfferCard key={offer.slug} offer={billing === "annual" ? { ...offer, price: monthlyPrice(offer), period: "year" } : offer} />)}
+          {offers.filter((offer) => ["creator-starter", "creator-pro", "agency-workspace"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} />)}
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {offers.filter((offer) => ["highlight-launch-pack", "agency-production-retainer"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} />)}
+          {offers.filter((offer) => ["highlight-launch-pack", "agency-production-retainer"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} />)}
         </div>
       </motion.section>
 
