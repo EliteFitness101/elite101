@@ -105,12 +105,9 @@ const faqs = [
 const formatUsd = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
 
 function OfferButton({ offer }: { offer: Offer }) {
-  const isAgency = offer.slug.includes("agency");
-  const intent = offer.slug === "highlight-launch-pack" ? "elite-highlight-launch-pack" : `elite-${offer.slug}`;
-  const destination = isAgency ? `/auth?role=brand&intent=${intent}` : `/auth?role=model&intent=${intent}`;
   return (
     <Button asChild className="elite-cta h-12 w-full rounded-full font-semibold">
-      <Link to={destination}>{offer.cta}<ArrowRight className="ml-2 h-4 w-4" /></Link>
+      <Link to={`/checkout?offer=${offer.slug}`}>{offer.cta}<ArrowRight className="ml-2 h-4 w-4" /></Link>
     </Button>
   );
 }
