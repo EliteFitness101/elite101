@@ -26,7 +26,7 @@ import Questionnaire from "./pages/Questionnaire";
 import Monetization from "./pages/Monetization";
 import BrandGrowth from "./pages/BrandGrowth";
 const Explore = lazy(() => import("./pages/Explore"));
-const ChatB2KConcierge = lazy(() => import("@/components/ChatB2KConcierge"));
+const ChatB2KConcierge = lazy(() => import("@/components/ChatB2KConcierge").then((module) => ({ default: module.ChatB2KConcierge })));
 
 const queryClient = new QueryClient();
 
