@@ -100,29 +100,36 @@ const Auth = () => {
       return;
     }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth?role=${parsed.data.role}&intent=${encodeURIComponent(interestIntent)}`,
-        data: { display_name: parsed.data.displayName, app_role: parsed.data.role, interest_intent: interestIntent },
-      },
-    });
-    if (error) {
-      toast.error(error.message);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth?role=${parsed.data.role}&intent=${encodeURIComponent(interestIntent)}`,
+          data: { display_name: parsed.data.displayName, app_role: parsed.data.role, interest_intent: interestIntent },
+        },
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      if (data.user && !data.session) {
+        setVerificationEmail(parsed.data.email);
+        toast.success("Account created. Check your email for a verification link before signing in.");
+        setTab("signin");
+      } else if (data.user && data.session) {
+        if (!interestIntent.startsWith("elite-")) toast.success("Welcome to Elite NG!");
+        await refreshRoles();
+        navigate(interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (parsed.data.role === "brand" ? "/onboarding/brand" : "/onboarding/model"), { replace: true });
+      } else {
+        toast.error("The account service returned no account confirmation. Please retry.");
+      }
+    } catch (error) {
+      console.error("[auth] signup request failed", error);
+      toast.error("Could not reach the account service. Check your connection and retry.");
+    } finally {
       setLoading(false);
-      return;
     }
-    if (data.user && !data.session) {
-      setVerificationEmail(parsed.data.email);
-      toast.success("Account created. Check your email for a verification link before signing in.");
-      setTab("signin");
-    } else if (data.user && data.session) {
-      if (!interestIntent.startsWith("elite-")) toast.success("Welcome to Elite NG!");
-      await refreshRoles();
-      navigate(interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (parsed.data.role === "brand" ? "/onboarding/brand" : "/onboarding/model"), { replace: true });
-    }
-    setLoading(false);
   };
 
   const onForgotPassword = async () => {
