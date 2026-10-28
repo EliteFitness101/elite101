@@ -1,4 +1,4 @@
-import { createCipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 export const BUFFER_REDIRECT_URI =
   process.env.BUFFER_REDIRECT_URI || "https://elite.resofit.fit/api/auth/buffer/callback";
