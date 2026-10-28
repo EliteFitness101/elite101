@@ -113,6 +113,23 @@ export default async function handler(req: any, res: any) {
     );
 
     if (!persistResponse.ok) return finish(res, "token_persistence_failed");
+
+    // Keep the existing server-side Buffer publisher on the current OAuth access token.
+    // Tokens are sent only to a service-role RPC; never return them to the browser.
+    const bridgeResponse = await fetch(`${url}/rest/v1/rpc/store_buffer_oauth_tokens`, {
+      method: "POST",
+      headers: {
+        apikey: serviceRoleKey,
+        authorization: `Bearer ${serviceRoleKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        p_access_token: tokens.access_token,
+        p_refresh_token: tokens.refresh_token,
+      }),
+    });
+    if (!bridgeResponse.ok) return finish(res, "publisher_token_sync_failed");
+
     return finish(res, "connected");
   } catch (error) {
     const status = error instanceof Error && /configuration|secret|key|redirect/i.test(error.message)
