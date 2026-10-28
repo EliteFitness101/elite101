@@ -81,8 +81,8 @@ const Auth = () => {
           toast.error("Your account is signed in, but the Elite Media request could not be submitted. Return to the offer and retry.");
         } else {
           toast.success(interestIntent === "elite-media-free-trial"
-            ? "Your free 7-day pilot request is queued for review."
-            : "Your Elite Media offer request is queued for review.");
+            ? "Your free 7-day pilot is activated. Open your Elite Media dashboard."
+            : "Your Elite Media offer request is recorded. Paid features activate after verified checkout.");
         }
       }
       if (!cancelled) navigate(destination, { replace: true });
@@ -214,8 +214,8 @@ const Auth = () => {
             <p className="text-sm font-semibold text-foreground">Your Elite Media request</p>
             {interestIntent === "elite-media-free-trial" ? (
               <>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">Request your free 7-day pilot: one sample highlight clip (subject to source-media suitability), three caption/post drafts, and a simple 7-day content plan.</p>
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">No automatic paid subscription. The team confirms scope and start date after signup. Social publishing is included only where a supported integration is connected and verified.</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">Your free 7-day pilot activates automatically after account verification: one sample highlight clip (subject to source-media suitability), three caption/post drafts, and a simple 7-day content plan.</p>
+                <p className="mt-2 text-xs leading-5 text-muted-foreground">No automatic paid subscription. Trial access starts when your verified account's trial request is recorded. Social publishing is available only where a supported integration is connected and verified.</p>
               </>
             ) : (
               <>
