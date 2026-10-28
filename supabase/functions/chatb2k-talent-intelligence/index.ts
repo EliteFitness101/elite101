@@ -51,14 +51,28 @@ async function enrichWithAI(input: Record<string, unknown>) {
   const prompt = JSON.stringify({ task: "Enrich this new talent profile for career and portfolio planning. Keep it globally relevant, preference-led and evidence-based. Do not assign a numerical score unless a separate verified scoring engine supplies it.", profile: input });
   const openaiKey = await runtimeSecret("OPENAI_API_KEY");
   if (openaiKey) {
-    const model = (await runtimeSecret("OPENAI_MODEL")) || "gpt-4.1-mini";
+    const configuredModel = (await runtimeSecret("OPENAI_MODEL")) || "gpt-6-luna";
+    // GPT-4o and GPT-4.1 models are scheduled for API removal on 2027-01-14.
+    // Normalize legacy configuration to the documented migration target.
+    const model = /^gpt-(4\\.1|4o)(?:-|$)/i.test(configuredModel) ? "gpt-6-luna" : configuredModel;
     try {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      const r = await fetch("https://api.openai.com/v1/responses", {
         method: "POST", headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model, temperature: 0.2, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: prompt }] }), signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({
+          model,
+          reasoning: { effort: "none" },
+          instructions: system,
+          input: prompt,
+          text: { format: { type: "json_object" } },
+        }),
+        signal: AbortSignal.timeout(20000),
       });
-      if (r.ok) { const d = await r.json(); const raw = d.choices?.[0]?.message?.content; if (raw) return { provider: "openai", model, data: JSON.parse(raw) }; }
-      console.error("OpenAI enrichment unavailable", r.status);
+      const d = await r.json().catch(() => ({}));
+      const raw = typeof d.output_text === "string"
+        ? d.output_text
+        : (d.output || []).flatMap((item: any) => (item.content || []).filter((part: any) => part.type === "output_text").map((part: any) => part.text || "")).join("");
+      if (r.ok && raw) return { provider: "openai", model, data: JSON.parse(raw) };
+      console.error("OpenAI enrichment unavailable", r.status, JSON.stringify(d).slice(0, 350));
     } catch (e) { console.error("OpenAI enrichment request failed; trying Gemini", String(e).slice(0, 200)); }
   }
   const geminiKey = (await runtimeSecret("GEMINI_API_KEY")) || (await runtimeSecret("GEMINI_AUTOMATION_API_KEY"));
