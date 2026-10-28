@@ -30,7 +30,7 @@ export default async function handler(req: any, res: any) {
     authorizationUrl.searchParams.set("response_type", "code");
     authorizationUrl.searchParams.set(
       "scope",
-      "account:read account:write posts:read posts:write ideas:read ideas:write offline_access",
+      "account:read posts:read posts:write offline_access",
     );
     authorizationUrl.searchParams.set("state", state);
     authorizationUrl.searchParams.set("code_challenge", challenge);
