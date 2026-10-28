@@ -1,5 +1,4 @@
 import {
-  BUFFER_REDIRECT_URI,
   clearStateCookie,
   encryptTokenBundle,
   fail,
