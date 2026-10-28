@@ -1,7 +1,6 @@
 import {
   clearStateCookie,
   encryptTokenBundle,
-  fail,
   readSignedStateCookie,
   requiredEnv,
   supabaseConfig,
