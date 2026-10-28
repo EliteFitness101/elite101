@@ -5,7 +5,7 @@ import {
   requiredEnv,
   requireAdmin,
   validateRedirectUri,
-} from "../../../lib/server/buffer-oauth";
+} from "../../../lib/server/buffer-oauth.js";
 
 export default async function handler(req: any, res: any) {
   res.setHeader("Cache-Control", "no-store");
