@@ -1,6 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
-  BUFFER_REDIRECT_URI,
   fail,
   makeSignedStateCookie,
   requiredEnv,
