@@ -86,6 +86,7 @@ export default function AdminDashboard() {
   const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [eliteMediaRequests, setEliteMediaRequests] = useState<EliteMediaRequestRow[]>([]);
+  const [bufferConnecting, setBufferConnecting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -192,7 +193,48 @@ export default function AdminDashboard() {
     await load();
   };
 
-  useEffect(() => { load(); }, []);
+  const connectBuffer = async () => {
+    setBufferConnecting(true);
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session) throw new Error("Sign in as an Elite administrator before connecting Buffer.");
+      const response = await fetch("/api/auth/buffer/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        credentials: "same-origin",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.authorizationUrl !== "string") {
+        throw new Error(result.error || "Buffer OAuth could not be started.");
+      }
+      window.location.assign(result.authorizationUrl);
+    } catch (error: any) {
+      toast.error(error?.message || "Buffer connection failed to start.");
+      setBufferConnecting(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+    const url = new URL(window.location.href);
+    const status = url.searchParams.get("buffer_oauth");
+    if (status) {
+      const messages: Record<string, string> = {
+        connected: "Buffer OAuth connected and encrypted credentials were persisted.",
+        authorization_denied: "Buffer authorization was declined.",
+        state_invalid: "Buffer OAuth state validation failed. Restart the connection.",
+        code_missing: "Buffer returned without an authorization code.",
+        token_exchange_failed: "Buffer token exchange failed; no credentials were saved.",
+        token_persistence_failed: "Buffer authorized the app, but secure token persistence failed.",
+        configuration_missing: "Buffer OAuth server configuration is incomplete.",
+        callback_failed: "Buffer OAuth callback failed; no success was recorded.",
+      };
+      if (status === "connected") toast.success(messages[status]);
+      else toast.error(messages[status] || "Buffer OAuth did not complete.");
+      url.searchParams.delete("buffer_oauth");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+  }, []);
 
   const updateModelStatus = async (id: string, status: "approved" | "rejected") => {
     const { error } = await supabase.from("models").update({ status }).eq("id", id);
@@ -212,9 +254,14 @@ export default function AdminDashboard() {
             </h1>
             <p className="text-muted-foreground mt-1">Platform analytics & operations</p>
           </div>
-          <Button variant="outline" onClick={load} disabled={loading}>
-            Refresh
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={connectBuffer} disabled={bufferConnecting}>
+              {bufferConnecting ? "Connecting…" : "Connect Buffer"}
+            </Button>
+            <Button variant="outline" onClick={load} disabled={loading}>
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* KPI cards */}
