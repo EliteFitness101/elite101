@@ -54,7 +54,7 @@ async function enrichWithAI(input: Record<string, unknown>) {
     const configuredModel = (await runtimeSecret("OPENAI_MODEL")) || "gpt-6-luna";
     // GPT-4o and GPT-4.1 models are scheduled for API removal on 2027-01-14.
     // Normalize legacy configuration to the documented migration target.
-    const model = /^gpt-(4\\.1|4o)(?:-|$)/i.test(configuredModel) ? "gpt-6-luna" : configuredModel;
+    const model = /^gpt-(4\.1|4o)(?:-|$)/i.test(configuredModel) ? "gpt-6-luna" : configuredModel;
     try {
       const r = await fetch("https://api.openai.com/v1/responses", {
         method: "POST", headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
