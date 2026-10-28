@@ -6,7 +6,7 @@ import {
   requiredEnv,
   supabaseConfig,
   validateRedirectUri,
-} from "../../../lib/server/buffer-oauth";
+} from "../../../lib/server/buffer-oauth.js";
 
 function finish(res: any, status: string) {
   clearStateCookie(res);
