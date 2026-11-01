@@ -1,0 +1,26 @@
+name: ResoFlex Stream Engine CI
+on:
+  push:
+    branches: [main, "feat/resoflex-stream-engine"]
+    paths:
+      - "services/resoflex-stream-engine/**"
+      - "supabase/migrations/*resoflex_stream_engine.sql"
+      - ".github/workflows/resoflex-stream-ci.yml"
+  pull_request:
+    paths:
+      - "services/resoflex-stream-engine/**"
+      - "supabase/migrations/*resoflex_stream_engine.sql"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/resoflex-stream-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q app
+      - run: docker build -t resoflex-stream-engine:test .
