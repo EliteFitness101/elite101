@@ -1,0 +1,21 @@
+services:
+  resoflex-stream-engine:
+    build: .
+    image: resoflex-stream-engine:latest
+    container_name: resoflex-stream-engine
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - stream-assets:/data/assets
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=5)"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 30s
+    stop_grace_period: 25s
+volumes:
+  stream-assets:
