@@ -24,14 +24,14 @@ create table if not exists public.resoflex_stream_jobs (
 create index if not exists resoflex_stream_jobs_claim_idx on public.resoflex_stream_jobs(status,created_at);
 create table if not exists public.resoflex_stream_sessions (
   id uuid primary key default gen_random_uuid(),
-  job_id uuid not null references public.resoflex_stream_jobs(id) on delete cascade,
+  job_id uuid not null unique references public.resoflex_stream_jobs(id) on delete cascade,
   status text not null,
   detail jsonb not null default '{}'::jsonb,
   started_at timestamptz,
   ended_at timestamptz,
   created_at timestamptz not null default now()
 );
-create unique index if not exists resoflex_stream_one_live_session on public.resoflex_stream_sessions ((status)) where status in ('starting','running','stopping');
+create unique index if not exists resoflex_stream_one_live_session on public.resoflex_stream_sessions ((true)) where status in ('starting','running','stopping');
 alter table public.resoflex_stream_schedules enable row level security;
 alter table public.resoflex_stream_jobs enable row level security;
 alter table public.resoflex_stream_sessions enable row level security;
@@ -68,10 +68,17 @@ create or replace function public.resoflex_stream_update_session(p_job_id uuid,p
 returns void language plpgsql security definer set search_path=public as $$
 begin
  update public.resoflex_stream_jobs set status=p_status,updated_at=now(),lease_until=null where id=p_job_id;
- insert into public.resoflex_stream_sessions(job_id,status,detail,started_at,ended_at)
- values(p_job_id,p_status,coalesce(p_detail,'{}'::jsonb),
-   case when p_status='running' then now() end,
-   case when p_status in ('failed','stopped') then now() end);
+ update public.resoflex_stream_sessions
+   set status=p_status,detail=coalesce(p_detail,'{}'::jsonb),
+       started_at=case when p_status='running' then coalesce(started_at,now()) else started_at end,
+       ended_at=case when p_status in ('failed','stopped') then now() else null end
+ where job_id=p_job_id;
+ if not found then
+   insert into public.resoflex_stream_sessions(job_id,status,detail,started_at,ended_at)
+   values(p_job_id,p_status,coalesce(p_detail,'{}'::jsonb),
+     case when p_status='running' then now() end,
+     case when p_status in ('failed','stopped') then now() end);
+ end if;
 end $$;
 revoke all on function public.resoflex_stream_enqueue_job(uuid,text,text) from public,anon,authenticated;
 revoke all on function public.resoflex_stream_claim_job(text) from public,anon,authenticated;
