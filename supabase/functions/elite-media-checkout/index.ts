@@ -9,8 +9,6 @@ const offers = {
   "highlight-launch-pack": { name: "Highlight Launch Pack", usd: 49, interval: "once" },
   "creator-starter": { name: "Starter", usd: 9, interval: "monthly" },
   "creator-pro": { name: "Pro", usd: 19, interval: "monthly" },
-  "agency-workspace": { name: "Agency Workspace", usd: 99, interval: "monthly" },
-  "agency-production-retainer": { name: "Agency Production", usd: 300, interval: "monthly" },
 } as const;
 const json = (status: number, body: unknown, origin: string) => new Response(JSON.stringify(body), {
   status, headers: {
