@@ -105,14 +105,19 @@ const faqs = [
 const formatUsd = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
 
 function OfferButton({ offer }: { offer: Offer }) {
+  const requestOnly = ["agency-workspace", "agency-production-retainer"].includes(offer.slug);
+  const destination = requestOnly
+    ? `/auth?role=brand&intent=elite-${offer.slug}`
+    : `/checkout?offer=${offer.slug}`;
   return (
     <Button asChild className="elite-cta h-12 w-full rounded-full font-semibold">
-      <Link to={`/checkout?offer=${offer.slug}`}>{offer.cta}<ArrowRight className="ml-2 h-4 w-4" /></Link>
+      <Link to={destination}>{offer.cta}<ArrowRight className="ml-2 h-4 w-4" /></Link>
     </Button>
   );
 }
 
 function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstimate?: number; fxUpdatedAt?: string }) {
+  const requestOnly = ["agency-workspace", "agency-production-retainer"].includes(offer.slug);
   return (
     <article className={`elite-offer-card relative flex h-full flex-col rounded-[1.7rem] p-6 md:p-7 ${offer.popular ? "elite-offer-featured" : ""}`}>
       {offer.popular && <span className="elite-pill absolute right-5 top-5"><Sparkles className="h-3 w-3" /> MOST POPULAR</span>}
@@ -124,14 +129,14 @@ function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstim
         <span className="text-sm text-white/45">/{offer.period}</span>
       </div>
       <p className="mt-2 text-sm font-medium text-white/75">{ngnEstimate !== undefined ? new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(ngnEstimate) : "NGN estimate unavailable"}</p>
-      <p className="mt-1 text-xs text-white/45">{fxUpdatedAt ? `Indicative FX quote updated ${new Date(fxUpdatedAt).toLocaleString()}. Final NGN amount is confirmed at secure checkout.` : "No hardcoded FX rate. Live quote is required for an NGN estimate."}</p>
+      <p className="mt-1 text-xs text-white/45">{requestOnly ? "Indicative estimate only. Final scope and fee are confirmed in an agency proposal." : fxUpdatedAt ? `Indicative FX quote updated ${new Date(fxUpdatedAt).toLocaleString()}. Final NGN amount is confirmed at secure checkout.` : "No hardcoded FX rate. Live quote is required for an NGN estimate."}</p>
       <div className="my-6 h-px bg-white/10" />
       <p className="mb-4 text-sm font-medium text-white/80">Designed for: {offer.audience}</p>
       <ul className="mb-7 flex-1 space-y-3">
         {offer.features.map((feature) => <li key={feature} className="flex gap-3 text-sm leading-5 text-white/70"><Check className="mt-0.5 h-4 w-4 shrink-0 text-[#e7c36f]" />{feature}</li>)}
       </ul>
       <OfferButton offer={offer} />
-      <p className="mt-3 text-center text-[11px] leading-4 text-white/40">Scope and availability confirmed before payment.</p>
+      <p className="mt-3 text-center text-[11px] leading-4 text-white/40">{requestOnly ? "Consultation and scope confirmation before proposal." : "Scope and availability confirmed before payment."}</p>
       <Link to={`/offers/${offer.slug}`} className="mt-4 inline-flex items-center justify-center gap-1 text-xs text-[#f4d58b]/80 hover:text-[#f4d58b]">View full details <ArrowRight className="h-3 w-3" /></Link>
     </article>
   );
@@ -182,7 +187,7 @@ function PricingPage() {
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Choose your next step: <span className="elite-gold-text">trial or plan.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Try the free 7-day pilot first, choose a creator plan, or request managed production when you are ready.</p></div>
-          <p className="max-w-xs text-xs leading-5 text-white/45">Live NGN estimates are indicative. Secure Paystack checkout confirms the exact NGN amount before authorization; monthly plans renew automatically until cancelled.</p>
+          <p className="max-w-xs text-xs leading-5 text-white/45">Creator self-serve plans use secure Paystack checkout. Agency workspace and managed production begin with a consultation and agreed proposal before payment.</p>
         </div>
 
         <div id="trial" className="elite-glass mb-8 scroll-mt-24 overflow-hidden rounded-[1.8rem] border border-[#e9c979]/30 p-6 sm:p-8 md:p-10">

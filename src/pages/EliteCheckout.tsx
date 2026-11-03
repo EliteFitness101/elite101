@@ -8,8 +8,6 @@ const offers: Record<string, { name: string; usd: number; interval: "once" | "mo
   "highlight-launch-pack": { name: "Highlight Launch Pack", usd: 49, interval: "once", description: "One-time editing and delivery package." },
   "creator-starter": { name: "Starter", usd: 9, interval: "monthly", description: "Creator workspace subscription, billed monthly." },
   "creator-pro": { name: "Pro", usd: 19, interval: "monthly", description: "Expanded creator workflow, billed monthly." },
-  "agency-workspace": { name: "Agency Workspace", usd: 99, interval: "monthly", description: "Multi-creator team workspace, billed monthly." },
-  "agency-production-retainer": { name: "Agency Production", usd: 300, interval: "monthly", description: "Managed monthly production retainer." },
 };
 
 type CheckoutStatus = { status: string; offer_name: string; amount_ngn: number; currency: string; billing_interval: string; paid_at?: string | null };
@@ -121,6 +119,8 @@ export default function EliteCheckout() {
                 )}
               </div>
             </>
+          ) : slug === "agency-workspace" || slug === "agency-production-retainer" ? (
+            <div className="mt-6"><h1 className="text-4xl font-semibold">Let's scope your agency workflow.</h1><p className="mt-4 text-white/60">Agency workspace and managed production start with a consultation. Share your requirements and receive an agreed proposal before any payment is requested.</p><Link to={`/auth?role=brand&intent=elite-${slug}`} className="elite-cta mt-7 inline-flex h-12 items-center rounded-full px-6 font-semibold">Request agency consultation <ArrowRight className="ml-2 h-4 w-4" /></Link></div>
           ) : (
             <div className="mt-6"><h1 className="text-4xl font-semibold">Choose an offer first.</h1><p className="mt-4 text-white/60">Select an Elite NG offer to start secure checkout.</p><Link to="/monetization" className="elite-cta mt-7 inline-flex h-12 items-center rounded-full px-6 font-semibold">View offers <ArrowRight className="ml-2 h-4 w-4" /></Link></div>
           )}
