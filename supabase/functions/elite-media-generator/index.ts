@@ -52,9 +52,10 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "generate_prompts");
     const topic = typeof body.topic === "string" ? body.topic.trim() : "";
-    if (!topic || topic.length > 500) return reply({ ok: false, error: "topic_required_max_500_chars" }, 400);
     const sourceUrl = typeof body.source_media_url === "string" ? body.source_media_url.trim() : "";
-    if (sourceUrl && !/^https:\/\//i.test(sourceUrl)) return reply({ ok: false, error: "source_media_url_must_be_https" }, 400);
+    const needsTopic = action === "generate_prompts" || action === "create_render_job";
+    if (needsTopic && (!topic || topic.length > 500)) return reply({ ok: false, error: "topic_required_max_500_chars" }, 400);
+    if (needsTopic && sourceUrl && !/^https:\/\//i.test(sourceUrl)) return reply({ ok: false, error: "source_media_url_must_be_https" }, 400);
 
     const { data: requests, error: requestError } = await admin.from("elite_media_requests")
       .select("id,status,subscription_status,trial_starts_at,trial_ends_at")
@@ -87,13 +88,14 @@ Deno.serve(async (req: Request) => {
       if (sourceUrl) {
         return reply({ ok: false, error: "source_media_editing_not_enabled_for_prompt_to_video_worker", supported_mode: "prompt_to_video" }, 409);
       }
-      if (body.resolution && body.resolution !== "720p") {
-        return reply({ ok: false, error: "unsupported_resolution", supported_resolution: "720p" }, 409);
+      if (body.resolution && !["320p", "720p"].includes(body.resolution)) {
+        return reply({ ok: false, error: "unsupported_resolution", supported_resolutions: ["320p", "720p"] }, 409);
       }
+      const outputResolution = body.resolution === "720p" ? "720p" : "320p";
       const { data: job, error } = await admin.from("elite_media_generation_jobs").insert({
         user_id: user.id, request_id: active.id,
         job_type: "video_render",
-        status: "queued", input: { topic, source_media_url: sourceUrl || null, output_format: "mp4", resolution: "720p" },
+        status: "queued", input: { topic, source_media_url: sourceUrl || null, output_format: "mp4", resolution: outputResolution },
         output: { render_profiles: spec.render_profiles, ffmpeg_templates: spec.ffmpeg_templates, player: spec.player },
         source_url: sourceUrl || null
       }).select("id,status,created_at").single();
@@ -117,7 +119,7 @@ Deno.serve(async (req: Request) => {
         }).eq("id", job.id).eq("user_id", user.id);
         return reply({ ok: false, error: "render_worker_start_failed", job, worker: workerBody }, 502);
       }
-      return reply({ ok: true, job, worker: workerBody, execution_status: "Veo render submitted; poll_render_job to retrieve the completed MP4" }, 202);
+      return reply({ ok: true, job, worker: workerBody, execution_status: "Gemini video generation submitted; GitHub Actions FFmpeg runner finalizes the MP4" }, 202);
     }
     if (action === "poll_render_job") {
       const jobId = typeof body.job_id === "string" ? body.job_id.trim() : "";
