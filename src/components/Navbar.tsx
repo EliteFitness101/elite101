@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Navbar = () => {
   const { user, roles, signOut } = useAuth();
@@ -11,6 +12,23 @@ export const Navbar = () => {
     : roles.includes("brand")
     ? "/dashboard/brand"
     : "/dashboard/model";
+
+  const openDashboard = async () => {
+    if (!user) return navigate("/auth");
+    const { data } = await supabase.from("elite_media_requests")
+      .select("status,subscription_status,trial_starts_at,trial_ends_at")
+      .eq("user_id", user.id)
+      .in("status", ["approved", "in_progress"])
+      .order("created_at", { ascending: false })
+      .limit(10);
+    const now = Date.now();
+    const hasActiveEliteAccess = (data ?? []).some((request: any) =>
+      (request.subscription_status === "trial" && request.trial_starts_at && request.trial_ends_at &&
+        new Date(request.trial_starts_at).getTime() <= now && new Date(request.trial_ends_at).getTime() > now) ||
+      ["active", "paid", "subscribed"].includes(String(request.subscription_status || "").toLowerCase())
+    );
+    navigate(hasActiveEliteAccess ? "/dashboard/elite-media" : dashboardPath);
+  };
 
   return (
     <header className="sticky top-0 z-40 glass-strong border-b border-gold/20">
@@ -35,7 +53,7 @@ export const Navbar = () => {
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => navigate(dashboardPath)}>
+              <Button variant="ghost" size="sm" onClick={() => void openDashboard()}>
                 Dashboard
               </Button>
               <Button variant="outline" size="sm" onClick={() => signOut().then(() => navigate("/"))}>
