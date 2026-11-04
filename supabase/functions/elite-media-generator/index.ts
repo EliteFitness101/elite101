@@ -84,10 +84,16 @@ Deno.serve(async (req: Request) => {
       if (body.output_format === "hls") {
         return reply({ ok: false, error: "hls_transcode_worker_not_connected", supported_output_format: "mp4" }, 409);
       }
+      if (sourceUrl) {
+        return reply({ ok: false, error: "source_media_editing_not_supported_by_veo_worker", supported_mode: "prompt_to_video" }, 409);
+      }
+      if (body.resolution && body.resolution !== "720p") {
+        return reply({ ok: false, error: "unsupported_resolution", supported_resolution: "720p" }, 409);
+      }
       const { data: job, error } = await admin.from("elite_media_generation_jobs").insert({
         user_id: user.id, request_id: active.id,
-        job_type: body.output_format === "hls" ? "hls_transcode" : "video_render",
-        status: "queued", input: { topic, source_media_url: sourceUrl || null, output_format: body.output_format === "hls" ? "hls" : "mp4", resolution: body.resolution === "320p" ? "320p" : "720p" },
+        job_type: "video_render",
+        status: "queued", input: { topic, source_media_url: sourceUrl || null, output_format: "mp4", resolution: "720p" },
         output: { render_profiles: spec.render_profiles, ffmpeg_templates: spec.ffmpeg_templates, player: spec.player },
         source_url: sourceUrl || null
       }).select("id,status,created_at").single();
