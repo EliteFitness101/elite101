@@ -65,12 +65,23 @@ const Auth = () => {
     let destination = interestIntent.startsWith("elite-") ? "/dashboard/elite-media" : (roles.includes("brand") ? "/dashboard/brand" : "/dashboard/model");
 
     const continueSignedInUser = async () => {
-      if (!hasExplicitIntent && !interestIntent.startsWith("elite-")) {
-        const { data: existingMediaRequests } = await supabase.from("elite_media_requests").select("id").eq("user_id", user.id).limit(1);
-        if (cancelled) return;
-        if (existingMediaRequests?.length) destination = "/dashboard/elite-media";
-      }
-      if (interestIntent.startsWith("elite-") && handledEliteIntent.current !== user.id + ":" + interestIntent) {
+      // An already-approved, currently entitled Elite Media request takes priority
+      // over generic signup/callback intents such as "become-model".
+      const { data: existingMediaRequests } = await supabase.from("elite_media_requests")
+        .select("id,status,subscription_status,trial_starts_at,trial_ends_at")
+        .eq("user_id", user.id)
+        .in("status", ["approved", "in_progress"])
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (cancelled) return;
+      const now = Date.now();
+      const hasActiveEliteAccess = (existingMediaRequests ?? []).some((request: any) =>
+        (request.subscription_status === "trial" && request.trial_starts_at && request.trial_ends_at &&
+          new Date(request.trial_starts_at).getTime() <= now && new Date(request.trial_ends_at).getTime() > now) ||
+        ["active", "paid", "subscribed"].includes(String(request.subscription_status || "").toLowerCase())
+      );
+      if (hasActiveEliteAccess) destination = "/dashboard/elite-media";
+      if (interestIntent.startsWith("elite-") && !hasActiveEliteAccess && handledEliteIntent.current !== user.id + ":" + interestIntent) {
         handledEliteIntent.current = user.id + ":" + interestIntent;
         const { error } = await supabase.functions.invoke("elite-media-request", {
           body: { intent: interestIntent },
