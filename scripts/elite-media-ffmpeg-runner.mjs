@@ -134,8 +134,15 @@ async function processJob(job) {
         asset_type:"video", mime_type:"video/mp4", width, height, aspect_ratio:"9:16",
         rights_status:"unknown", commercial_status:"review_required",
         qa_status:"pending", qa_reason:"FFmpeg derivative; technical profile and public readback verified. Human/platform QA required before publication.",
+        origin_review_status:"pending",
+        content_origin:{ provider:"google_flow_consumer", mode:"consumer_ui_export", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+          raw_storage_path:job.output?.storage_path ?? sourcePath, raw_sha256:job.output?.sha256 ?? null,
+          original_filename:job.output?.original_filename ?? null, ingested_at:job.output?.ingested_at ?? null },
+        rights_evidence:{ status:"pending_review", provider:"google_flow_consumer", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+          raw_storage_path:job.output?.storage_path ?? sourcePath, raw_sha256:job.output?.sha256 ?? null },
         content_pillar:"ELITE_MEDIA",
-        intelligence:{ elite_job_id:job.id, resolution, codec:stream.codec_name, pixel_format:stream.pix_fmt,
+        intelligence:{ elite_job_id:job.id, source_provider:"google_flow_consumer", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+          raw_storage_path:job.output?.storage_path ?? sourcePath, resolution, codec:stream.codec_name, pixel_format:stream.pix_fmt,
           byte_size:rendered.length, sha256:digest, renderer:"GitHub Actions FFmpeg" },
         verified_at:new Date().toISOString(), updated_at:new Date().toISOString()
       })
