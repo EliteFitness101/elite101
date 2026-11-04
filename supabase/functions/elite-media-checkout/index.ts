@@ -9,6 +9,8 @@ const offers = {
   "highlight-launch-pack": { name: "Highlight Launch Pack", usd: 49, interval: "once" },
   "creator-starter": { name: "Starter", usd: 9, interval: "monthly" },
   "creator-pro": { name: "Pro", usd: 19, interval: "monthly" },
+  "agency-workspace": { name: "Agency Workspace", usd: 99, interval: "monthly" },
+  "agency-production-retainer": { name: "Agency Production", usd: 300, interval: "monthly" },
 } as const;
 const json = (status: number, body: unknown, origin: string) => new Response(JSON.stringify(body), {
   status, headers: {
@@ -51,6 +53,13 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const slug = String(body?.offer_slug ?? "");
+    if (slug === "agency-workspace" || slug === "agency-production-retainer") {
+      return json(409, {
+        error: "consultation_required",
+        message: "Agency offers require a consultation request and cannot be purchased through direct checkout.",
+        offer_slug: slug,
+      }, origin);
+    }
     const offer = offers[slug as keyof typeof offers];
     if (!offer) return json(400, { error: "invalid_offer" }, origin);
     const email = String(body?.email ?? "").trim().toLowerCase().slice(0, 255);
