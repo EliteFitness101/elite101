@@ -1,4 +1,4 @@
-project_id = "kkawlqqhdvumkmeifooz"
+project_id = "vbqjvmnhdtdhmeeudqnn"
 
 [functions.score-model]
 verify_jwt = true
@@ -14,3 +14,27 @@ verify_jwt = false
 
 [functions.paystack-webhook]
 verify_jwt = false
+
+[functions.elite-media-request]
+verify_jwt = true
+
+[functions.elite-media-workspace]
+verify_jwt = true
+
+[functions.elite-media-fx-quote]
+verify_jwt = false
+
+[functions.elite-media-checkout]
+verify_jwt = false
+
+[functions.elite-media-checkout-status]
+verify_jwt = false
+
+[functions.elite-media-manage-subscription]
+verify_jwt = false
+
+[functions.elite-media-generator]
+verify_jwt = true
+
+[functions.elite-media-render-worker]
+verify_jwt = true
