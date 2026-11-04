@@ -167,7 +167,7 @@ function PricingPage() {
           <h1 className="text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl md:text-8xl">Make every moment <span className="elite-gold-text">work harder.</span></h1>
           <p className="mx-auto mt-7 max-w-2xl text-base leading-7 text-white/60 sm:text-lg">Turn approved BIGO highlights into social-ready clips, prepare captions and content calendars, and coordinate publishing workflows across your connected platforms.</p>
           <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="#trial" className="elite-cta inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-semibold">Try 7 days free <ArrowRight className="ml-2 h-4 w-4" /></a>
+            <a href="#trial" className="elite-cta inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-semibold">Request 7-day pilot <ArrowRight className="ml-2 h-4 w-4" /></a>
             <a href="#offers" className="elite-glass inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-medium text-white/80">Compare plans <ArrowDownRight className="ml-2 h-4 w-4" /></a>
             <a href="#how-it-works" className="elite-glass inline-flex h-12 items-center justify-center rounded-full px-7 text-sm font-medium text-white/80">How it works <ArrowDownRight className="ml-2 h-4 w-4" /></a>
           </div>
@@ -186,7 +186,7 @@ function PricingPage() {
 
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} id="offers" className="relative z-10 mx-auto max-w-7xl scroll-mt-24 px-4 py-12 sm:px-6 md:py-20">
         <div className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Choose your next step: <span className="elite-gold-text">trial or plan.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Try the free 7-day pilot first, choose a creator plan, or request managed production when you are ready.</p></div>
+          <div><p className="elite-kicker mb-3">CHOOSE YOUR NEXT MOVE</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Choose your next step: <span className="elite-gold-text">trial or plan.</span></h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Request the free 7-day pilot first, choose a creator plan, or request managed production when you are ready.</p></div>
           <p className="max-w-xs text-xs leading-5 text-white/45">Creator self-serve plans use secure Paystack checkout. Agency workspace and managed production begin with a consultation and agreed proposal before payment.</p>
         </div>
 
