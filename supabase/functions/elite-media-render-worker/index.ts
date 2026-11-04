@@ -87,6 +87,7 @@ Deno.serve(async (req: Request) => {
     if (!owned) return reply({ ok: false, error: "entitled_job_not_found" }, 404);
     const job = owned.job;
     if (job.job_type !== "video_render") return reply({ ok: false, error: "mp4_video_render_jobs_only; hls_requires_a_separate_transcode_worker" }, 409);
+    if (action === "start") return reply({ ok: false, error: "server_side_video_generation_disabled_use_elite_media_flow_ingest" }, 409);
     const output = { ...(job.output || {}) };
     if (output.ffmpeg_render_pending === true) {
       return reply({ ok: true, job_id: job.id, status: "rendering", ffmpeg_queued: true }, 202);
