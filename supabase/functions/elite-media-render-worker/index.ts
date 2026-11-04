@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
   try {
-    const token = req.headers.get("Authorization")?.match(/^Bearer\\s+(.+)$/i)?.[1];
+    const token = req.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
     if (!token) return reply({ ok: false, error: "authentication_required" }, 401);
     const { data: { user }, error: authError } = await admin.auth.getUser(token);
     if (authError || !user || !user.email_confirmed_at) return reply({ ok: false, error: "verified_account_required" }, 401);
