@@ -1,6 +1,11 @@
 name: Elite Media FFmpeg Runner
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/elite-media-ffmpeg.yml'
+      - 'scripts/elite-media-ffmpeg-runner.mjs'
   workflow_dispatch:
     inputs:
       job_id:
