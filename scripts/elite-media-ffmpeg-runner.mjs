@@ -6,7 +6,8 @@ import path from "node:path";
 
 const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const outputBucket = "resofit-social-media";
+let selectedOutputRoute = null;
+let outputBucket = "";
 if (!base || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY repository secrets");
 
 async function api(route, init = {}) {
@@ -23,6 +24,24 @@ async function api(route, init = {}) {
   if (!response.ok) throw new Error(`Supabase HTTP ${response.status}: ${body.slice(0, 500)}`);
   return body ? JSON.parse(body) : null;
 }
+
+async function selectOutputRoute() {
+  const routes = await api("/rest/v1/chatb2k_provider_routes?service_type=eq.media_storage&status=eq.active&select=route_id,provider,config");
+  const candidates = (routes || [])
+    .filter(route => route.config?.bucket && route.config?.supports_video === true &&
+      route.config?.selection_policy?.public_only === true &&
+      route.config?.selection_policy?.preferred_for?.includes("elite_generated_video"))
+    .sort((a, b) => Number(a.config.priority || 999) - Number(b.config.priority || 999));
+  for (const route of candidates) {
+    const bucket = await api("/storage/v1/bucket/" + encodeURIComponent(route.config.bucket));
+    if (bucket?.public === true && Number(bucket.file_size_limit || 0) >= 45 * 1024 * 1024) {
+      return route;
+    }
+  }
+  throw new Error("No active, public, video-capable ChatB2K storage route passed bucket metadata verification");
+}
+selectedOutputRoute = await selectOutputRoute();
+outputBucket = selectedOutputRoute.config.bucket;
 function run(command, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
@@ -122,6 +141,20 @@ async function processJob(job) {
       })
     });
     if (!registry?.[0]?.id) throw new Error("Asset registry upsert returned no asset ID");
+
+    const routeConfig = {
+      ...selectedOutputRoute.config,
+      runtime_verified: true,
+      health_state: "write_read_registry_verified",
+      last_verified_at: new Date().toISOString(),
+      last_verified_job_id: job.id,
+      last_verified_asset_id: registry[0].id
+    };
+    await api("/rest/v1/chatb2k_provider_routes?route_id=eq." + encodeURIComponent(selectedOutputRoute.route_id), {
+      method: "PATCH",
+      headers: { "content-type": "application/json", prefer: "return=minimal" },
+      body: JSON.stringify({ config: routeConfig, updated_at: new Date().toISOString() })
+    });
     const output = {
       ...(job.output || {}),
       raw_output_url:job.output?.raw_output_url ?? null,
