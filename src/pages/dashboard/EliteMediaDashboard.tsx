@@ -284,7 +284,7 @@ export default function EliteMediaDashboard() {
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-gold">Elite AI Studio</p>
               <h2 className="mt-2 font-display text-2xl">Create an original vertical video</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Generate an 8-second, 9:16 MP4 draft from a text brief. This is prompt-to-video generation, not editing of the source-media link above.</p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Generate a short-form, 9:16 MP4 draft from a text brief. This is prompt-to-video generation, not editing of the source-media link above.</p>
             </div>
             <Film className="h-6 w-6 text-gold" />
           </div>
@@ -297,7 +297,7 @@ export default function EliteMediaDashboard() {
               <Label htmlFor="elite-render-topic">Video brief</Label>
               <Textarea id="elite-render-topic" value={renderTopic} onChange={(e) => setRenderTopic(e.target.value)} maxLength={500} rows={3} required placeholder="Describe the scene, audience, visual style, and intended message. Avoid unsupported claims or copyrighted characters." />
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">MP4 · 720p · 9:16 · 8 seconds. Provider usage may incur generation costs.</p>
+                <p className="text-xs text-muted-foreground">MP4 · 720p · 9:16 portrait. Provider usage may incur generation costs.</p>
                 <Button type="submit" disabled={rendering || !renderTopic.trim()} className="bg-gold text-primary-foreground">{rendering ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</> : <><Film className="mr-2 h-4 w-4" />Generate MP4</>}</Button>
               </div>
             </form>
