@@ -176,9 +176,9 @@ Deno.serve(async (req: Request) => {
       }
       if (bytes.byteLength < 1024) throw new Error("video_output_too_small");
       const stored = await uploadVideo(job, bytes);
-      const sourceAssetId = `${job.id}:veo-v1`;
+      const sourceAssetId = `${job.id}:omni-v1`;
       const { data: asset, error: assetError } = await admin.from("content_asset_registry").upsert({
-        source_provider: "elite_gemini_veo",
+        source_provider: "elite_gemini_omni",
         source_asset_id: sourceAssetId,
         source_url: stored.publicUrl,
         canonical_url: stored.publicUrl,
@@ -197,7 +197,7 @@ Deno.serve(async (req: Request) => {
       }, { onConflict: "source_provider,source_asset_id" }).select("id,canonical_url,asset_type,qa_status").single();
       if (assetError) throw assetError;
       output.asset_id = asset.id;
-      output.provider = "google_gemini_veo";
+      output.provider = "google_gemini_omni";
       output.model = VIDEO_MODEL;
       output.mime_type = "video/mp4";
       output.byte_size = stored.bytes;
