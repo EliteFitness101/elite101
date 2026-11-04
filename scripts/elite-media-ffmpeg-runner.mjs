@@ -6,7 +6,7 @@ import path from "node:path";
 
 const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const bucket = "digital-product-media";
+const outputBucket = "resofit-social-media";
 if (!base || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY repository secrets");
 
 async function api(route, init = {}) {
@@ -54,6 +54,7 @@ async function processJob(job) {
   }
 
   const sourcePath = job.output?.storage_path;
+  const sourceBucket = job.output?.storage_bucket === "resofit-paid-deliverables" ? "resofit-paid-deliverables" : "digital-product-media";
   const expectedPrefix = `elite-media/${job.user_id}/${job.id}/`;
   if (typeof sourcePath !== "string" || !sourcePath.startsWith(expectedPrefix) || sourcePath.includes("..") || !sourcePath.endsWith("/final.mp4")) {
     throw new Error("Source storage path does not match the owned Elite job");
@@ -61,7 +62,7 @@ async function processJob(job) {
   const resolution = job.input?.resolution === "720p" ? "720p" : "320p";
   const width = resolution === "320p" ? 180 : 405;
   const height = resolution === "320p" ? 320 : 720;
-  const download = await fetch(`${base}/storage/v1/object/authenticated/${bucket}/${sourcePath.split("/").map(encodeURIComponent).join("/")}`, {
+  const download = await fetch(`${base}/storage/v1/object/authenticated/${sourceBucket}/${sourcePath.split("/").map(encodeURIComponent).join("/")}`, {
     headers: { apikey: key, authorization: `Bearer ${key}` },
     signal: AbortSignal.timeout(90_000),
   });
@@ -91,14 +92,14 @@ async function processJob(job) {
     }
     const digest = createHash("sha256").update(rendered).digest("hex");
     const targetPath = `elite-media/${job.user_id}/${job.id}/final-${resolution}.mp4`;
-    const upload = await fetch(`${base}/storage/v1/object/${bucket}/${targetPath.split("/").map(encodeURIComponent).join("/")}`, {
+    const upload = await fetch(`${base}/storage/v1/object/${outputBucket}/${targetPath.split("/").map(encodeURIComponent).join("/")}`, {
       method: "POST",
       headers: { apikey:key, authorization:`Bearer ${key}`, "content-type":"video/mp4", "x-upsert":"true" },
       body: rendered,
       signal: AbortSignal.timeout(90_000),
     });
     if (!upload.ok) throw new Error(`Derivative upload failed: HTTP ${upload.status} ${(await upload.text()).slice(0,300)}`);
-    const publicUrl = `${base}/storage/v1/object/public/${bucket}/${targetPath.split("/").map(encodeURIComponent).join("/")}`;
+    const publicUrl = `${base}/storage/v1/object/public/${outputBucket}/${targetPath.split("/").map(encodeURIComponent).join("/")}`;
     const head = await fetch(publicUrl, { method:"HEAD", signal:AbortSignal.timeout(30_000) });
     if (!head.ok || !(head.headers.get("content-type") || "").toLowerCase().startsWith("video/")) {
       throw new Error("Public MP4 playback HEAD readback failed");
@@ -123,7 +124,9 @@ async function processJob(job) {
     if (!registry?.[0]?.id) throw new Error("Asset registry upsert returned no asset ID");
     const output = {
       ...(job.output || {}),
-      raw_output_url:job.output?.raw_output_url ?? job.output_url ?? null,
+      raw_output_url:job.output?.raw_output_url ?? null,
+      raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+      raw_storage_path:job.output?.storage_path ?? sourcePath,
       output_url:publicUrl,
       storage_path:targetPath,
       asset_id:registry[0].id,
