@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
     const { data: requests, error: requestError } = await admin.from("elite_media_requests")
       .select("id,status,subscription_status,trial_starts_at,trial_ends_at")
       .eq("user_id", user.id)
-      .in("status", ["approved"])
+      .in("status", ["approved", "in_progress"])
       .order("created_at", { ascending: false }).limit(10);
     if (requestError) throw requestError;
     const now = Date.now();
