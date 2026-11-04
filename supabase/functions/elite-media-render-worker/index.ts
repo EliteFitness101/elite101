@@ -96,7 +96,12 @@ Deno.serve(async (req: Request) => {
     const key = await geminiKey();
     if (action === "start") {
       await ensureBucket();
-      if (output.provider_operation) return reply({ ok: true, job_id: job.id, status: job.status, operation_submitted: true });
+      if (output.provider_operation && job.status === "rendering") return reply({ ok: true, job_id: job.id, status: job.status, operation_submitted: true });
+      if (job.status === "failed") {
+        delete output.provider_operation;
+        delete output.provider_error;
+        delete output.provider_http_status;
+      }
       if (job.status !== "queued" && job.status !== "failed") return reply({ ok: false, error: "job_not_startable", status: job.status }, 409);
       const topic = String(job.input?.topic || "").trim();
       if (!topic) return reply({ ok: false, error: "render_topic_missing" }, 400);
