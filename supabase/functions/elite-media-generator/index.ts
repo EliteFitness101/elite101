@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
         return reply({ ok: false, error: "hls_transcode_worker_not_connected", supported_output_format: "mp4" }, 409);
       }
       if (sourceUrl) {
-        return reply({ ok: false, error: "source_media_editing_not_supported_by_veo_worker", supported_mode: "prompt_to_video" }, 409);
+        return reply({ ok: false, error: "source_media_editing_not_enabled_for_prompt_to_video_worker", supported_mode: "prompt_to_video" }, 409);
       }
       if (body.resolution && body.resolution !== "720p") {
         return reply({ ok: false, error: "unsupported_resolution", supported_resolution: "720p" }, 409);
