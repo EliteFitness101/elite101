@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, Save, ShieldCheck, FileVideo, CalendarClock, ArrowRight } from "lucide-react";
+import { Loader2, Save, ShieldCheck, FileVideo, CalendarClock, ArrowRight, Film, RefreshCw } from "lucide-react";
 
 type RequestRow = {
   id: string; intent: string; status: string; created_at: string; updated_at: string;
@@ -19,6 +19,15 @@ type RequestRow = {
   goals: string | null; content_source_url: string | null; preferred_contact: string | null;
   service_terms_accepted_at: string | null; privacy_consent_at: string | null; media_rights_confirmed_at: string | null;
   onboarding_completed_at: string | null; subscription_status: string; subscription_plan: string | null; billing_reference: string | null;
+};
+
+type RenderJobRow = {
+  id: string;
+  request_id: string | null;
+  status: string;
+  input: { topic?: string } | null;
+  output_url: string | null;
+  created_at: string;
 };
 
 const offers = [
@@ -53,8 +62,17 @@ export default function EliteMediaDashboard() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [confirmRights, setConfirmRights] = useState(false);
+  const [renderJobs, setRenderJobs] = useState<RenderJobRow[]>([]);
+  const [renderTopic, setRenderTopic] = useState("");
+  const [rendering, setRendering] = useState(false);
+  const [pollingJobId, setPollingJobId] = useState("");
 
   const selected = useMemo(() => requests.find((r) => r.id === selectedId) ?? null, [requests, selectedId]);
+  const renderEntitled = Boolean(selected && ["approved", "in_progress"].includes(selected.status) && (
+    (selected.subscription_status === "trial" && selected.trial_starts_at && selected.trial_ends_at &&
+      new Date(selected.trial_starts_at).getTime() <= Date.now() && new Date(selected.trial_ends_at).getTime() > Date.now()) ||
+    ["active", "paid", "subscribed"].includes(String(selected.subscription_status || "").toLowerCase())
+  ));
 
   const applyRow = useCallback((row: RequestRow | null) => {
     setBusinessName(row?.business_name ?? "");
@@ -85,6 +103,10 @@ export default function EliteMediaDashboard() {
     }
     const rows = (data.requests ?? []) as RequestRow[];
     setRequests(rows);
+    const { data: jobRows, error: jobsError } = await supabase.from("elite_media_generation_jobs")
+      .select("id,request_id,status,input,output_url,created_at")
+      .eq("user_id", user.id).order("created_at", { ascending: false }).limit(10);
+    if (!jobsError) setRenderJobs((jobRows ?? []) as RenderJobRow[]);
     const nextId = rows.some((r) => r.id === selectedId) ? selectedId : (rows[0]?.id ?? "");
     setSelectedId(nextId);
     applyRow(rows.find((r) => r.id === nextId) ?? null);
@@ -145,6 +167,40 @@ export default function EliteMediaDashboard() {
     }
     toast.success("Workspace details and consent records saved.");
     setSaving(false);
+    await load();
+  };
+
+  const startRender = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected || !renderEntitled || !renderTopic.trim()) return;
+    setRendering(true);
+    const { data, error } = await supabase.functions.invoke("elite-media-generator", {
+      body: { action: "create_render_job", topic: renderTopic.trim(), output_format: "mp4", resolution: "720p" },
+    });
+    if (error || !data?.ok) {
+      toast.error(data?.error ?? error?.message ?? "The MP4 render could not be started.");
+      setRendering(false);
+      return;
+    }
+    toast.success("MP4 render submitted. Use Check render to retrieve the finished video.");
+    setRenderTopic("");
+    setRendering(false);
+    await load();
+  };
+
+  const pollRender = async (jobId: string) => {
+    setPollingJobId(jobId);
+    const { data, error } = await supabase.functions.invoke("elite-media-generator", {
+      body: { action: "poll_render_job", job_id: jobId },
+    });
+    if (error || !data?.ok) {
+      toast.error(data?.worker?.error ?? error?.message ?? "Could not check this render yet.");
+    } else if (data.worker?.status === "ready") {
+      toast.success("Your MP4 is ready. Human QA is still required before publication.");
+    } else {
+      toast.info("Render is still processing. Check again shortly.");
+    }
+    setPollingJobId("");
     await load();
   };
 
@@ -222,6 +278,49 @@ export default function EliteMediaDashboard() {
             <Button type="submit" disabled={saving} className="bg-gold text-primary-foreground">{saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <><Save className="mr-2 h-4 w-4" />Save customer brief</>}</Button>
           </div>
         </form>
+
+        <section className="glass-strong rounded-3xl p-5 md:p-8 space-y-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-gold">Elite AI Studio</p>
+              <h2 className="mt-2 font-display text-2xl">Create an original vertical video</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Generate an 8-second, 9:16 MP4 draft from a text brief. This is prompt-to-video generation, not editing of the source-media link above.</p>
+            </div>
+            <Film className="h-6 w-6 text-gold" />
+          </div>
+          {!selected ? (
+            <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Save a customer brief and select it before starting a render.</p>
+          ) : !renderEntitled ? (
+            <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Rendering is enabled after this request is approved and has an active 7-day trial or paid entitlement. Your brief and consent remain saved.</p>
+          ) : (
+            <form onSubmit={startRender} className="space-y-3">
+              <Label htmlFor="elite-render-topic">Video brief</Label>
+              <Textarea id="elite-render-topic" value={renderTopic} onChange={(e) => setRenderTopic(e.target.value)} maxLength={500} rows={3} required placeholder="Describe the scene, audience, visual style, and intended message. Avoid unsupported claims or copyrighted characters." />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">MP4 · 720p · 9:16 · 8 seconds. Provider usage may incur generation costs.</p>
+                <Button type="submit" disabled={rendering || !renderTopic.trim()} className="bg-gold text-primary-foreground">{rendering ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</> : <><Film className="mr-2 h-4 w-4" />Generate MP4</>}</Button>
+              </div>
+            </form>
+          )}
+          <div className="space-y-3 border-t border-border pt-4">
+            <h3 className="font-semibold">Recent render jobs</h3>
+            {renderJobs.filter((job) => !selected || job.request_id === selected.id).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No render jobs for this request yet.</p>
+            ) : renderJobs.filter((job) => !selected || job.request_id === selected.id).map((job) => (
+              <div key={job.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{job.input?.topic ?? "Elite video render"}</p>
+                  <p className="mt-1 text-xs capitalize text-muted-foreground">{statusLabel(job.status)} · {dateLabel(job.created_at)}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {job.output_url && <a href={job.output_url} target="_blank" rel="noreferrer" className="text-sm text-gold underline underline-offset-4">Open MP4</a>}
+                  {["queued", "rendering"].includes(job.status) && <Button type="button" size="sm" variant="outline" disabled={pollingJobId === job.id} onClick={() => void pollRender(job.id)}>{pollingJobId === job.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Check render</Button>}
+                </div>
+              </div>
+            ))}
+            <p className="text-xs leading-5 text-muted-foreground">Generated assets are saved to the media registry with QA pending. Review the video and rights/brand suitability before publishing. HLS and source-footage editing are not enabled in this render path.</p>
+          </div>
+        </section>
 
         {selected?.admin_notes && <section className="glass rounded-2xl p-5"><h2 className="font-semibold">Team update</h2><p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{selected.admin_notes}</p></section>}
         <p className="text-center text-xs text-muted-foreground">Need to change your offer? <Link to="/monetization" className="text-gold underline underline-offset-4">Review Elite Media plans</Link>.</p>
