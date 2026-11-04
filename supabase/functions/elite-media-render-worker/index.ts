@@ -48,7 +48,7 @@ async function ensureBucket() {
     if (current.data.public !== true) throw new Error("media_bucket_must_be_public_for_delivery");
     return;
   }
-  const created = await admin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 524288000 });
+  const created = await admin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 52428800 });
   if (created.error && !/already exists/i.test(created.error.message)) throw created.error;
   const verified = await admin.storage.getBucket(BUCKET);
   if (!verified.data || verified.data.public !== true) throw new Error("media_bucket_provisioning_failed");
@@ -59,7 +59,7 @@ async function uploadVideo(job: any, bytes: Uint8Array) {
   const bucket = admin.storage.from(BUCKET);
   let result = await bucket.upload(path, bytes, { contentType: "video/mp4", upsert: true });
   if (result.error) {
-    const created = await admin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 524288000 });
+    const created = await admin.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 52428800 });
     if (created.error && !/already exists/i.test(created.error.message)) throw created.error;
     result = await bucket.upload(path, bytes, { contentType: "video/mp4", upsert: true });
   }
@@ -88,6 +88,9 @@ Deno.serve(async (req: Request) => {
     const job = owned.job;
     if (job.job_type !== "video_render") return reply({ ok: false, error: "mp4_video_render_jobs_only; hls_requires_a_separate_transcode_worker" }, 409);
     const output = { ...(job.output || {}) };
+    if (output.ffmpeg_render_pending === true) {
+      return reply({ ok: true, job_id: job.id, status: "rendering", ffmpeg_queued: true }, 202);
+    }
 
     if (action === "status") {
       return reply({ ok: true, job_id: job.id, status: job.status, output_url: job.output_url, output });
@@ -144,9 +147,14 @@ Deno.serve(async (req: Request) => {
       const state = await poll.json().catch(() => null);
       if (!poll.ok) return reply({ ok: false, error: "video_provider_poll_failed", provider_status: poll.status }, 502);
       if (state?.status === "failed") {
-        output.provider_error = String(state?.error?.message || state?.error || "video_generation_failed").slice(0, 240);
-        await admin.from("elite_media_generation_jobs").update({ status: "failed", output, updated_at: new Date().toISOString() }).eq("id", job.id);
-        return reply({ ok: false, error: "video_generation_failed" }, 502);
+        const providerFailure = state?.error?.message || state?.error?.detail || (typeof state?.error === "string" ? state.error : "") || state?.message || "Provider reported a terminal generation failure without a diagnostic message.";
+        output.provider_status = "failed";
+        output.provider_error = String(providerFailure).slice(0, 240);
+        output.provider_failure_observed_at = new Date().toISOString();
+        const { error: failureUpdateError } = await admin.from("elite_media_generation_jobs")
+          .update({ status: "failed", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+        if (failureUpdateError) throw failureUpdateError;
+        return reply({ ok: true, job_id: job.id, status: "failed", completed: true, error: "video_generation_failed", detail: output.provider_error }, 200);
       }
       if (state?.status !== "completed") return reply({ ok: true, job_id: job.id, status: "rendering", completed: false }, 202);
       const videoBlock = (state?.steps || []).filter((step: any) => step?.type === "model_output")
@@ -207,10 +215,13 @@ Deno.serve(async (req: Request) => {
       output.storage_path = stored.path;
       output.qa_status = "pending";
       output.completed_at = new Date().toISOString();
+      output.raw_output_url = stored.publicUrl;
+      output.ffmpeg_render_pending = true;
+      output.ffmpeg_resolution = job.input?.resolution === "720p" ? "720p" : "320p";
       const { error: updateError } = await admin.from("elite_media_generation_jobs")
-        .update({ status: "ready", output_url: stored.publicUrl, output, updated_at: new Date().toISOString() }).eq("id", job.id);
+        .update({ status: "rendering", output_url: null, output, updated_at: new Date().toISOString() }).eq("id", job.id);
       if (updateError) throw updateError;
-      return reply({ ok: true, job_id: job.id, status: "ready", output_url: stored.publicUrl, asset_id: asset.id, qa_status: "pending" });
+      return reply({ ok: true, job_id: job.id, status: "rendering", ffmpeg_queued: true, qa_status: "pending" }, 202);
     }
 
     return reply({ ok: false, error: "unsupported_action", supported_actions: ["start", "poll", "status"] }, 400);
