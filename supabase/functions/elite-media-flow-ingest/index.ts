@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const url = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-const BUCKET = "digital-product-media";
+const BUCKET = "resofit-paid-deliverables";
 const MAX_BYTES = 45 * 1024 * 1024;
 const cors = {
   "Access-Control-Allow-Origin": "https://elite.resofit.fit",
@@ -51,7 +51,7 @@ Deno.serve(async (req: Request) => {
     const resolution = String(form.get("resolution") || "320p") === "720p" ? "720p" : "320p";
     const topic = String(form.get("topic") || "").trim().slice(0, 500);
     const bucket = await admin.storage.getBucket(BUCKET);
-    if (!bucket.data || bucket.data.public !== true || Number(bucket.data.fileSizeLimit || 0) < MAX_BYTES) {
+    if (!bucket.data || bucket.data.public !== false || Number(bucket.data.fileSizeLimit || 0) < MAX_BYTES) {
       return reply({ ok: false, error: "elite_media_storage_bucket_not_ready" }, 503);
     }
 
@@ -79,17 +79,17 @@ Deno.serve(async (req: Request) => {
       }).eq("id", job.id).eq("user_id", user.id);
       throw upload.error;
     }
-    const publicUrl = admin.storage.from(BUCKET).getPublicUrl(storagePath).data.publicUrl;
-    const readback = await fetch(publicUrl, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(20000) });
-    const contentType = (readback.headers.get("content-type") || "").toLowerCase();
-    if (!readback.ok || !contentType.startsWith("video/")) {
+    const expectedHash = await sha256(bytes);
+    const readback = await admin.storage.from(BUCKET).download(storagePath);
+    const readbackBytes = readback.data ? new Uint8Array(await readback.data.arrayBuffer()) : new Uint8Array();
+    if (readback.error || readbackBytes.byteLength !== bytes.byteLength || await sha256(readbackBytes) !== expectedHash) {
       await admin.storage.from(BUCKET).remove([storagePath]);
       await admin.from("elite_media_generation_jobs").update({
         status: "failed",
-        output: { ingest_error: "public_storage_readback_failed", readback_status: readback.status },
+        output: { ingest_error: "private_storage_checksum_readback_failed" },
         updated_at: new Date().toISOString()
       }).eq("id", job.id).eq("user_id", user.id);
-      return reply({ ok: false, error: "public_storage_readback_failed" }, 502);
+      return reply({ ok: false, error: "private_storage_checksum_readback_failed" }, 502);
     }
 
     const output = {
@@ -98,9 +98,12 @@ Deno.serve(async (req: Request) => {
       source: "google_flow_export",
       original_filename: file.name.slice(0, 180),
       byte_size: bytes.byteLength,
-      sha256: await sha256(bytes),
+      sha256: expectedHash,
+      storage_bucket: BUCKET,
       storage_path: storagePath,
-      raw_output_url: publicUrl,
+      raw_storage_bucket: BUCKET,
+      raw_storage_path: storagePath,
+      raw_output_url: null,
       ffmpeg_render_pending: true,
       ffmpeg_resolution: resolution,
       qa_status: "pending",
@@ -108,7 +111,7 @@ Deno.serve(async (req: Request) => {
     };
     const { error: updateError } = await admin.from("elite_media_generation_jobs").update({
       status: "rendering",
-      source_url: publicUrl,
+      source_url: null,
       output,
       updated_at: new Date().toISOString()
     }).eq("id", job.id).eq("user_id", user.id);
@@ -123,6 +126,7 @@ Deno.serve(async (req: Request) => {
       resolution,
       bytes: bytes.byteLength,
       source_readback_verified: true,
+      source_visibility: "private",
       ffmpeg_queued: true
     }, 202);
   } catch (error) {
