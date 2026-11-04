@@ -6,7 +6,7 @@ import path from "node:path";
 
 const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const outputBucket = "digital-product-media";
+const outputBucket = "resofit-social-media";
 if (!base || !key) throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY repository secrets");
 
 async function api(route, init = {}) {
