@@ -71,7 +71,7 @@ async function render(jobId, resolution) {
       ["active", "paid", "subscribed"].includes(String(entitlement.subscription_status || "").toLowerCase()));
   if (!entitled) throw new Error("active_entitlement_required");
 
-  const sourcePath = `elite-media/${job.user_id}/${job.id}/source.mp4`;
+  const sourcePath = `elite-media/${job.user_id}/${job.id}/final.mp4`;
   const targetPath = `elite-media/${job.user_id}/${job.id}/final-${resolution}.mp4`;
   if (!safePath(sourcePath) || !safePath(targetPath)) throw new Error("storage_path_invalid");
   const sourceResponse = await supabase(`/storage/v1/object/authenticated/${BUCKET}/${sourcePath.split("/").map(encodeURIComponent).join("/")}`);
@@ -120,9 +120,50 @@ async function render(jobId, resolution) {
     if (!verify.ok || !(verify.headers.get("content-type") || "").toLowerCase().startsWith("video/")) {
       throw new Error("stored_mp4_readback_failed");
     }
-    return { ok: true, job_id: jobId, bucket: BUCKET, storage_path: targetPath, output_url: publicUrl,
+    const registry = await supabase("/rest/v1/content_asset_registry?on_conflict=source_provider,source_asset_id", {
+      method: "POST",
+      headers: { "content-type": "application/json", "prefer": "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify({
+        source_provider: "elite_gemini_omni_ffmpeg",
+        source_asset_id: `${jobId}:${resolution}:ffmpeg-v1`,
+        source_url: publicUrl,
+        canonical_url: publicUrl,
+        brand: "Elite NG",
+        campaign: "elite_media_generation",
+        asset_type: "video",
+        mime_type: "video/mp4",
+        width, height, aspect_ratio: "9:16",
+        rights_status: "gemini_api_generated",
+        commercial_status: "elite_media_generated",
+        qa_status: "pending",
+        qa_reason: "FFmpeg derivative; technical profile verified. Human and platform QA required before publication.",
+        content_pillar: "ELITE_MEDIA",
+        intelligence: { elite_job_id: jobId, resolution, codec: stream.codec_name, pixel_format: stream.pix_fmt, byte_size: rendered.length, sha256: digest, renderer: "ffmpeg" },
+        verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!registry.ok) throw new Error(`asset_registry_upsert_failed_http_${registry.status}`);
+    const assets = await registry.json();
+    const asset = assets[0];
+    if (!asset?.id) throw new Error("asset_registry_id_missing");
+    const jobUpdate = await supabase(`/rest/v1/elite_media_generation_jobs?id=eq.${encodeURIComponent(jobId)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", "prefer": "return=minimal" },
+      body: JSON.stringify({
+        status: "ready",
+        output_url: publicUrl,
+        output: { ...(job.output || {}), asset_id: asset.id, mime_type: "video/mp4", storage_path: targetPath,
+          resolution, width, height, codec: stream.codec_name, pixel_format: stream.pix_fmt,
+          byte_size: rendered.length, sha256: digest, renderer: "ffmpeg", qa_status: "pending",
+          transcoded_at: new Date().toISOString() },
+        updated_at: new Date().toISOString()
+      })
+    });
+    if (!jobUpdate.ok) throw new Error(`job_completion_update_failed_http_${jobUpdate.status}`);
+    return { ok: true, job_id: jobId, asset_id: asset.id, bucket: BUCKET, storage_path: targetPath, output_url: publicUrl,
       resolution, width, height, codec: stream.codec_name, pixel_format: stream.pix_fmt,
-      byte_size: rendered.length, sha256: digest, readback_verified: true };
+      byte_size: rendered.length, sha256: digest, readback_verified: true, registry_verified: true, job_marked_ready: true };
   } finally {
     await rm(work, { recursive: true, force: true });
   }
