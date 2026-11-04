@@ -106,9 +106,9 @@ Deno.serve(async (req: Request) => {
       delete output.provider_http_status;
       const prompt = "Create an original, rights-cleared premium vertical social video for Elite Media. Topic: " + topic.slice(0, 500) +
         ". Portrait 9:16, polished cinematic motion, clear subject, strong opening, natural movement, polished Nigerian/African lifestyle context where relevant, no fabricated testimonials, no unverified claims, no logos or text artifacts, no copyrighted characters or music. Use a coherent short-form social-video sequence and end with a clean final frame suitable for an accurate CTA overlay.";
-      const response = await fetch(`${GEMINI_API}/interactions?key=${encodeURIComponent(key)}`, {
+      const response = await fetch(`${GEMINI_API}/interactions`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "x-goog-api-key": key, "content-type": "application/json" },
         body: JSON.stringify({
           model: VIDEO_MODEL,
           input: prompt,
@@ -137,7 +137,8 @@ Deno.serve(async (req: Request) => {
     if (action === "poll") {
       const interactionId = String(output.provider_interaction_id || "");
       if (!interactionId) return reply({ ok: false, error: "provider_interaction_not_submitted" }, 409);
-      const poll = await fetch(`${GEMINI_API}/interactions/${encodeURIComponent(interactionId)}?key=${encodeURIComponent(key)}`, {
+      const poll = await fetch(`${GEMINI_API}/interactions/${encodeURIComponent(interactionId)}`, {
+        headers: { "x-goog-api-key": key },
         signal: AbortSignal.timeout(30000),
       });
       const state = await poll.json().catch(() => null);
@@ -159,14 +160,16 @@ Deno.serve(async (req: Request) => {
       } else if (typeof videoBlock?.uri === "string" && videoBlock.uri.length > 0) {
         const fileId = videoBlock.uri.split("/files/")[1]?.split(/[/:?]/)[0] || "";
         if (!fileId) throw new Error("video_provider_file_uri_invalid");
-        const fileInfoResponse = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}?key=${encodeURIComponent(key)}`, {
+        const fileInfoResponse = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}`, {
+          headers: { "x-goog-api-key": key },
           signal: AbortSignal.timeout(20000),
         });
         const fileInfo = await fileInfoResponse.json().catch(() => null);
         if (!fileInfoResponse.ok) throw new Error("video_provider_file_status_failed");
         if (fileInfo?.state === "FAILED") throw new Error("video_provider_file_failed");
         if (fileInfo?.state !== "ACTIVE") return reply({ ok: true, job_id: job.id, status: "rendering", file_state: fileInfo?.state || "PROCESSING" }, 202);
-        const download = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}:download?alt=media&key=${encodeURIComponent(key)}`, {
+        const download = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}:download?alt=media`, {
+          headers: { "x-goog-api-key": key },
           signal: AbortSignal.timeout(60000),
         });
         if (!download.ok) throw new Error("video_provider_download_failed");
