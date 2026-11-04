@@ -58,9 +58,9 @@ if(event.event==="charge.success"&&typeof eliteData?.reference==="string"){
 if(metadata.checkout_channel==="elite_media_paystack"){
  const {error:eliteCheckoutUpdateError}=await admin.from("elite_media_checkouts").update({status:"paid",paid_at:paidAt,updated_at:now}).eq("reference",reference).neq("status","active").neq("status","cancelled");
  if(eliteCheckoutUpdateError)throw eliteCheckoutUpdateError;
- const {data:eliteCheckout,error:eliteCheckoutLookupError}=await admin.from("elite_media_checkouts").select("auth_user_id,offer_slug").eq("reference",reference).maybeSingle();
+ const {data:eliteCheckout,error:eliteCheckoutLookupError}=await admin.from("elite_media_checkouts").select("auth_user_id,offer_slug,status").eq("reference",reference).maybeSingle();
  if(eliteCheckoutLookupError)throw eliteCheckoutLookupError;
- if(eliteCheckout)await syncEliteRequest(eliteCheckout.auth_user_id??subscriber.user_id??null,eliteCheckout.offer_slug,"active",reference);
+ if(eliteCheckout && ["paid","active"].includes(eliteCheckout.status))await syncEliteRequest(eliteCheckout.auth_user_id??subscriber.user_id??null,eliteCheckout.offer_slug,"active",reference);
 }
 const{error:revenueError}=await admin.from("revenue_events").upsert({payment_reference:reference,amount:receivedKobo/100,currency:"NGN",email,product_slug:subscriber.product_id,rsid:subscriber.rsid,status:"success",campaign:metadata.utm_campaign??metadata.campaign??null,utm:{source:metadata.utm_source??null,medium:metadata.utm_medium??null,campaign:metadata.utm_campaign??null,term:metadata.utm_term??null,content:metadata.utm_content??null}},{onConflict:"payment_reference"});if(revenueError)throw revenueError;
 // Close the existing attribution chain on verified Paystack success.
