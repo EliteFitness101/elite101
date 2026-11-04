@@ -66,6 +66,9 @@ export default function EliteMediaDashboard() {
   const [renderTopic, setRenderTopic] = useState("");
   const [rendering, setRendering] = useState(false);
   const [pollingJobId, setPollingJobId] = useState("");
+  const [flowFile, setFlowFile] = useState<File | null>(null);
+  const [flowResolution, setFlowResolution] = useState<"320p" | "720p">("320p");
+  const [flowPrompts, setFlowPrompts] = useState<{ role: string; duration_seconds: number; aspect_ratio: string; prompt: string }[]>([]);
 
   const selected = useMemo(() => requests.find((r) => r.id === selectedId) ?? null, [requests, selectedId]);
   const renderEntitled = Boolean(selected && ["approved", "in_progress"].includes(selected.status) && (
@@ -175,15 +178,39 @@ export default function EliteMediaDashboard() {
     if (!selected || !renderEntitled || !renderTopic.trim()) return;
     setRendering(true);
     const { data, error } = await supabase.functions.invoke("elite-media-generator", {
-      body: { action: "create_render_job", topic: renderTopic.trim(), output_format: "mp4", resolution: "720p" },
+      body: { action: "generate_prompts", topic: renderTopic.trim() },
     });
     if (error || !data?.ok) {
-      toast.error(data?.error ?? error?.message ?? "The MP4 render could not be started.");
+      toast.error(data?.error ?? error?.message ?? "The Flow prompt pack could not be prepared.");
       setRendering(false);
       return;
     }
-    toast.success("MP4 render submitted. Use Check render to retrieve the finished video.");
-    setRenderTopic("");
+    setFlowPrompts(data.prompts ?? []);
+    toast.success("Flow prompt pack prepared. Generate your clip in Google Flow, export MP4, then upload it below.");
+    setRendering(false);
+  };
+
+  const uploadFlowExport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected || !renderEntitled || !flowFile) return;
+    if (!flowFile.name.toLowerCase().endsWith(".mp4") || flowFile.size > 45 * 1024 * 1024) {
+      toast.error("Choose an MP4 file no larger than 45 MiB.");
+      return;
+    }
+    setRendering(true);
+    const form = new FormData();
+    form.set("file", flowFile);
+    form.set("request_id", selected.id);
+    form.set("topic", renderTopic.trim());
+    form.set("resolution", flowResolution);
+    const { data, error } = await supabase.functions.invoke("elite-media-flow-ingest", { body: form });
+    if (error || !data?.ok) {
+      toast.error(data?.error ?? error?.message ?? "The Flow export could not be ingested.");
+      setRendering(false);
+      return;
+    }
+    setFlowFile(null);
+    toast.success("Flow MP4 ingested. GitHub Actions will transcode and register the output.");
     setRendering(false);
     await load();
   };
@@ -283,27 +310,64 @@ export default function EliteMediaDashboard() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-gold">Elite AI Studio</p>
-              <h2 className="mt-2 font-display text-2xl">Create an original vertical video</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Generate a short-form, 9:16 MP4 draft from a text brief. This is prompt-to-video generation, not editing of the source-media link above.</p>
+              <h2 className="mt-2 font-display text-2xl">Google Flow → Elite MP4 pipeline</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">Use your existing Google Flow consumer access to generate and export the video. Elite ingests the MP4, runs FFmpeg, verifies playback, and registers the derivative. This route does not call the Gemini Developer API or incur Gemini API generation charges.</p>
             </div>
             <Film className="h-6 w-6 text-gold" />
           </div>
           {!selected ? (
-            <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Save a customer brief and select it before starting a render.</p>
+            <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Save a customer brief and select it before preparing or uploading a video.</p>
           ) : !renderEntitled ? (
-            <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Rendering is enabled after this request is approved and has an active 7-day trial or paid entitlement. Your brief and consent remain saved.</p>
+            <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">A valid approved trial or paid entitlement is required before Flow media can be ingested.</p>
           ) : (
-            <form onSubmit={startRender} className="space-y-3">
-              <Label htmlFor="elite-render-topic">Video brief</Label>
-              <Textarea id="elite-render-topic" value={renderTopic} onChange={(e) => setRenderTopic(e.target.value)} maxLength={500} rows={3} required placeholder="Describe the scene, audience, visual style, and intended message. Avoid unsupported claims or copyrighted characters." />
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">MP4 · 720p · 9:16 portrait. Provider usage may incur generation costs.</p>
-                <Button type="submit" disabled={rendering || !renderTopic.trim()} className="bg-gold text-primary-foreground">{rendering ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Submitting…</> : <><Film className="mr-2 h-4 w-4" />Generate MP4</>}</Button>
-              </div>
-            </form>
+            <div className="space-y-5">
+              <form onSubmit={startRender} className="space-y-3">
+                <Label htmlFor="elite-render-topic">Video brief</Label>
+                <Textarea id="elite-render-topic" value={renderTopic} onChange={(e) => setRenderTopic(e.target.value)} maxLength={500} rows={3} required placeholder="Describe the scene, audience, visual style, and intended message. Avoid unsupported claims or copyrighted characters." />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">Prepare prompts for Google Flow. This step does not generate video or call a paid API.</p>
+                  <Button type="submit" disabled={rendering || !renderTopic.trim()} variant="outline">{rendering ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Preparing…</> : "Prepare Flow prompts"}</Button>
+                </div>
+              </form>
+              {flowPrompts.length > 0 && (
+                <div className="space-y-3 rounded-xl border border-border p-4">
+                  <h3 className="font-semibold">Flow prompt pack</h3>
+                  {flowPrompts.map((item) => (
+                    <div key={item.role} className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gold">{item.role} · {item.duration_seconds}s · {item.aspect_ratio}</p>
+                      <p className="text-sm leading-6">{item.prompt}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <form onSubmit={uploadFlowExport} className="space-y-3 border-t border-border pt-4">
+                <h3 className="font-semibold">Upload exported Google Flow MP4</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="elite-flow-file">MP4 export (max 45 MiB)</Label>
+                    <input id="elite-flow-file" type="file" accept="video/mp4,.mp4" onChange={(e) => setFlowFile(e.target.files?.[0] ?? null)} className="block w-full rounded-xl border border-border bg-background p-3 text-sm" />
+                    {flowFile && <p className="text-xs text-muted-foreground">{flowFile.name} · {(flowFile.size / 1024 / 1024).toFixed(1)} MiB</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="elite-flow-resolution">Output resolution</Label>
+                    <select id="elite-flow-resolution" value={flowResolution} onChange={(e) => setFlowResolution(e.target.value as "320p" | "720p")} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm">
+                      <option value="320p">320p · Default</option>
+                      <option value="720p">720p · Higher quality</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">Technical QA and playback are automated; rights and publication approval remain pending human review.</p>
+                  <Button type="submit" disabled={rendering || !flowFile} className="bg-gold text-primary-foreground">{rendering ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading…</> : <><FileVideo className="mr-2 h-4 w-4" />Upload and queue FFmpeg</>}</Button>
+                </div>
+              </form>
+            </div>
           )}
           <div className="space-y-3 border-t border-border pt-4">
-            <h3 className="font-semibold">Recent render jobs</h3>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold">Recent render jobs</h3>
+              <Button type="button" size="sm" variant="outline" onClick={() => void load()}><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
+            </div>
             {renderJobs.filter((job) => !selected || job.request_id === selected.id).length === 0 ? (
               <p className="text-sm text-muted-foreground">No render jobs for this request yet.</p>
             ) : renderJobs.filter((job) => !selected || job.request_id === selected.id).map((job) => (
@@ -318,7 +382,7 @@ export default function EliteMediaDashboard() {
                 </div>
               </div>
             ))}
-            <p className="text-xs leading-5 text-muted-foreground">Generated assets are saved to the media registry with QA pending. Review the video and rights/brand suitability before publishing. HLS and source-footage editing are not enabled in this render path.</p>
+            <p className="text-xs leading-5 text-muted-foreground">Flow exports are stored with provenance preserved. The registry keeps rights, commercial clearance, and QA pending until reviewed; no asset is auto-published.</p>
           </div>
         </section>
 

@@ -1,0 +1,39 @@
+name: Elite Media FFmpeg Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Optional Elite video-render job UUID (blank processes queued jobs)
+        required: false
+        type: string
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elite-media-ffmpeg-runner
+  cancel-in-progress: false
+
+jobs:
+  render:
+    # This repository is public; standard GitHub-hosted runner usage is free.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Process Elite Media queue
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          INPUT_JOB_ID: ${{ inputs.job_id }}
+        run: node scripts/elite-media-ffmpeg-runner.mjs

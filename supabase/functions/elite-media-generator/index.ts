@@ -52,9 +52,10 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "generate_prompts");
     const topic = typeof body.topic === "string" ? body.topic.trim() : "";
-    if (!topic || topic.length > 500) return reply({ ok: false, error: "topic_required_max_500_chars" }, 400);
     const sourceUrl = typeof body.source_media_url === "string" ? body.source_media_url.trim() : "";
-    if (sourceUrl && !/^https:\/\//i.test(sourceUrl)) return reply({ ok: false, error: "source_media_url_must_be_https" }, 400);
+    const needsTopic = action === "generate_prompts";
+    if (needsTopic && (!topic || topic.length > 500)) return reply({ ok: false, error: "topic_required_max_500_chars" }, 400);
+    if (needsTopic && sourceUrl && !/^https:\/\//i.test(sourceUrl)) return reply({ ok: false, error: "source_media_url_must_be_https" }, 400);
 
     const { data: requests, error: requestError } = await admin.from("elite_media_requests")
       .select("id,status,subscription_status,trial_starts_at,trial_ends_at")
@@ -81,59 +82,34 @@ Deno.serve(async (req: Request) => {
       return reply({ ok: true, job, ...spec });
     }
     if (action === "create_render_job") {
-      if (body.output_format === "hls") {
-        return reply({ ok: false, error: "hls_transcode_worker_not_connected", supported_output_format: "mp4" }, 409);
-      }
-      if (sourceUrl) {
-        return reply({ ok: false, error: "source_media_editing_not_enabled_for_prompt_to_video_worker", supported_mode: "prompt_to_video" }, 409);
-      }
-      if (body.resolution && body.resolution !== "720p") {
-        return reply({ ok: false, error: "unsupported_resolution", supported_resolution: "720p" }, 409);
-      }
-      const { data: job, error } = await admin.from("elite_media_generation_jobs").insert({
-        user_id: user.id, request_id: active.id,
-        job_type: "video_render",
-        status: "queued", input: { topic, source_media_url: sourceUrl || null, output_format: "mp4", resolution: "720p" },
-        output: { render_profiles: spec.render_profiles, ffmpeg_templates: spec.ffmpeg_templates, player: spec.player },
-        source_url: sourceUrl || null
-      }).select("id,status,created_at").single();
-      if (error) throw error;
-      const workerResponse = await fetch(`${url}/functions/v1/elite-media-render-worker`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "apikey": serviceKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: "start", job_id: job.id }),
-        signal: AbortSignal.timeout(35000),
-      });
-      const workerBody = await workerResponse.json().catch(() => null);
-      if (!workerResponse.ok) {
-        await admin.from("elite_media_generation_jobs").update({
-          status: "failed",
-          output: { worker_dispatch_error: workerBody?.error || "render_worker_start_failed", worker_status: workerResponse.status },
-          updated_at: new Date().toISOString(),
-        }).eq("id", job.id).eq("user_id", user.id);
-        return reply({ ok: false, error: "render_worker_start_failed", job, worker: workerBody }, 502);
-      }
-      return reply({ ok: true, job, worker: workerBody, execution_status: "Veo render submitted; poll_render_job to retrieve the completed MP4" }, 202);
+      return reply({
+        ok: false,
+        error: "server_side_video_generation_disabled",
+        supported_mode: "google_flow_consumer_export",
+        next_action: "generate_prompts_then_upload_google_flow_export",
+        billing: "No Gemini Developer API request was made."
+      }, 409);
     }
     if (action === "poll_render_job") {
       const jobId = typeof body.job_id === "string" ? body.job_id.trim() : "";
       if (!jobId) return reply({ ok: false, error: "job_id_required" }, 400);
-      const workerResponse = await fetch(`${url}/functions/v1/elite-media-render-worker`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "apikey": serviceKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: "poll", job_id: jobId }),
-        signal: AbortSignal.timeout(65000),
+      const { data: job, error: jobError } = await admin.from("elite_media_generation_jobs")
+        .select("id,request_id,status,input,output,output_url,created_at,updated_at")
+        .eq("id", jobId).eq("user_id", user.id).maybeSingle();
+      if (jobError) throw jobError;
+      if (!job) return reply({ ok: false, error: "job_not_found" }, 404);
+      return reply({
+        ok: true,
+        worker: {
+          job_id: job.id,
+          status: job.status,
+          output_url: job.output_url,
+          asset_id: job.output?.asset_id ?? null,
+          qa_status: job.output?.qa_status ?? null,
+          ffmpeg_queued: job.output?.ffmpeg_render_pending === true,
+          output: job.output
+        }
       });
-      const workerBody = await workerResponse.json().catch(() => null);
-      return reply({ ok: workerResponse.ok, worker: workerBody }, workerResponse.status);
     }
     return reply({ ok: false, error: "unsupported_action", supported_actions: ["generate_prompts", "create_render_job", "poll_render_job"] }, 400);
   } catch (e) {
