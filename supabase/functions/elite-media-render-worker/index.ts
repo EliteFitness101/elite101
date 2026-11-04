@@ -32,7 +32,7 @@ async function getOwnedJob(jobId: string, userId: string) {
     .select("id,status,subscription_status,trial_starts_at,trial_ends_at")
     .eq("id", job.request_id).eq("user_id", userId).maybeSingle();
   if (requestError) throw requestError;
-  if (!request || request.status !== "approved") return null;
+  if (!request || !["approved", "in_progress"].includes(request.status)) return null;
   const now = Date.now();
   const entitled = request.subscription_status === "trial"
     ? !!request.trial_starts_at && !!request.trial_ends_at &&
