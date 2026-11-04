@@ -1,8 +1,10 @@
 # Elite Media FFmpeg renderer (Cloud Run)
 
-This is an additive transcoding service for the existing Elite Media job and entitlement model. It does not replace the Gemini generation provider. The generation worker must first upload the provider's original MP4 to:
+This is an additive transcoding service for the existing Elite Media job and entitlement model. It does not replace the Gemini generation provider. The current deployed Elite worker already uploads the provider MP4 to:
 
-`digital-product-media/elite-media/{user_id}/{job_id}/source.mp4`
+`digital-product-media/elite-media/{user_id}/{job_id}/final.mp4`
+
+The renderer reads that existing object and writes a separate derivative to `final-320p.mp4` (or `final-720p.mp4`).
 
 Then call `POST /render` with `Authorization: Bearer <ELITE_RENDER_SHARED_SECRET>` and JSON `{"job_id":"<uuid>","resolution":"320p"}`. Resolution defaults to 320p; 720p is optional.
 
@@ -12,7 +14,8 @@ The service:
 - validates source and output MP4 `ftyp` signatures;
 - transcodes with FFmpeg and validates codec, pixel format and exact output dimensions with ffprobe;
 - writes the derivative to the existing `digital-product-media` bucket and performs a public URL HEAD readback;
-- returns the storage path, public URL, byte size and SHA-256 for the Edge Function to register in `content_asset_registry` and complete the existing job.
+- upserts a derivative row in `content_asset_registry`, then updates the existing job's output URL and QA-pending metadata;
+- returns the storage path, public URL, byte size and SHA-256.
 
 ## Cloud Run deployment configuration
 
