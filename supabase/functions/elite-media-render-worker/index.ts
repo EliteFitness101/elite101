@@ -4,8 +4,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const url = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const VIDEO_MODEL = "veo-3.1-generate-preview";
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta";
+const VIDEO_MODEL = "gemini-omni-1.1-flash";
 const BUCKET = "digital-product-media";
 const cors = {
   "Access-Control-Allow-Origin": "https://elite.resofit.fit",
@@ -96,58 +96,84 @@ Deno.serve(async (req: Request) => {
     const key = await geminiKey();
     if (action === "start") {
       await ensureBucket();
-      if (output.provider_operation && job.status === "rendering") return reply({ ok: true, job_id: job.id, status: job.status, operation_submitted: true });
-      if (job.status === "failed") {
-        delete output.provider_operation;
-        delete output.provider_error;
-        delete output.provider_http_status;
-      }
+      if (output.provider_interaction_id && job.status === "rendering") return reply({ ok: true, job_id: job.id, status: job.status, interaction_submitted: true });
       if (job.status !== "queued" && job.status !== "failed") return reply({ ok: false, error: "job_not_startable", status: job.status }, 409);
       const topic = String(job.input?.topic || "").trim();
       if (!topic) return reply({ ok: false, error: "render_topic_missing" }, 400);
+      delete output.provider_operation;
+      delete output.provider_interaction_id;
+      delete output.provider_error;
+      delete output.provider_http_status;
       const prompt = "Create an original, rights-cleared premium vertical social video for Elite Media. Topic: " + topic.slice(0, 500) +
-        ". 9:16 portrait, 8 seconds, 720p, clear subject, strong first 1.5 seconds, natural motion, polished Nigerian/African lifestyle context where relevant, no fabricated testimonials, no unverified claims, no logos or text artifacts, no copyrighted characters or music. End with a clean final frame suitable for an accurate CTA overlay.";
-      const response = await fetch(`${GEMINI_BASE}/models/${VIDEO_MODEL}:predictLongRunning`, {
+        ". Portrait 9:16, polished cinematic motion, clear subject, strong opening, natural movement, polished Nigerian/African lifestyle context where relevant, no fabricated testimonials, no unverified claims, no logos or text artifacts, no copyrighted characters or music. Use a coherent short-form social-video sequence and end with a clean final frame suitable for an accurate CTA overlay.";
+      const response = await fetch(`${GEMINI_API}/interactions?key=${encodeURIComponent(key)}`, {
         method: "POST",
-        headers: { "x-goog-api-key": key, "content-type": "application/json" },
-        body: JSON.stringify({ instances: [{ prompt }], parameters: { aspectRatio: "9:16", durationSeconds: 8, resolution: "720p" } }),
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: VIDEO_MODEL,
+          input: prompt,
+          background: true,
+          response_format: { type: "video", delivery: "uri", aspect_ratio: "9:16", resolution: "720p" },
+        }),
         signal: AbortSignal.timeout(30000),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.name) {
+      if (!response.ok || !payload?.id) {
         const reason = String(payload?.error?.message || payload?.message || "provider_request_rejected").slice(0, 240);
         await admin.from("elite_media_generation_jobs").update({ status: "failed", output: { ...output, provider_error: reason, provider_http_status: response.status }, updated_at: new Date().toISOString() }).eq("id", job.id);
         return reply({ ok: false, error: "video_provider_submission_failed", provider_status: response.status, detail: reason }, 502);
       }
-      output.provider = "google_gemini_veo";
+      output.provider = "google_gemini_omni";
       output.model = VIDEO_MODEL;
-      output.provider_operation = payload.name;
+      output.provider_interaction_id = payload.id;
+      output.provider_status = payload.status || "in_progress";
       output.submitted_at = new Date().toISOString();
       const { error } = await admin.from("elite_media_generation_jobs")
         .update({ status: "rendering", output, updated_at: new Date().toISOString() }).eq("id", job.id);
       if (error) throw error;
-      return reply({ ok: true, job_id: job.id, status: "rendering", operation_submitted: true }, 202);
+      return reply({ ok: true, job_id: job.id, status: "rendering", interaction_submitted: true }, 202);
     }
 
     if (action === "poll") {
-      const operation = String(output.provider_operation || "");
-      if (!operation) return reply({ ok: false, error: "provider_operation_not_submitted" }, 409);
-      const poll = await fetch(`${GEMINI_BASE}/${operation}`, {
-        headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(20000),
+      const interactionId = String(output.provider_interaction_id || "");
+      if (!interactionId) return reply({ ok: false, error: "provider_interaction_not_submitted" }, 409);
+      const poll = await fetch(`${GEMINI_API}/interactions/${encodeURIComponent(interactionId)}?key=${encodeURIComponent(key)}`, {
+        signal: AbortSignal.timeout(30000),
       });
       const state = await poll.json().catch(() => null);
       if (!poll.ok) return reply({ ok: false, error: "video_provider_poll_failed", provider_status: poll.status }, 502);
-      if (!state?.done) return reply({ ok: true, job_id: job.id, status: "rendering", completed: false }, 202);
-      if (state.error) {
-        output.provider_error = String(state.error.message || "video_generation_failed").slice(0, 240);
+      if (state?.status === "failed") {
+        output.provider_error = String(state?.error?.message || state?.error || "video_generation_failed").slice(0, 240);
         await admin.from("elite_media_generation_jobs").update({ status: "failed", output, updated_at: new Date().toISOString() }).eq("id", job.id);
         return reply({ ok: false, error: "video_generation_failed" }, 502);
       }
-      const videoUri = state?.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
-      if (!videoUri) throw new Error("video_provider_output_missing");
-      const download = await fetch(videoUri, { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(60000) });
-      if (!download.ok) throw new Error("video_provider_download_failed");
-      const bytes = new Uint8Array(await download.arrayBuffer());
+      if (state?.status !== "completed") return reply({ ok: true, job_id: job.id, status: "rendering", completed: false }, 202);
+      const videoBlock = (state?.steps || []).filter((step: any) => step?.type === "model_output")
+        .flatMap((step: any) => Array.isArray(step?.content) ? step.content : [])
+        .find((item: any) => item?.type === "video") || state?.output_video || null;
+      let bytes: Uint8Array;
+      if (typeof videoBlock?.data === "string" && videoBlock.data.length > 0) {
+        const binary = atob(videoBlock.data);
+        bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      } else if (typeof videoBlock?.uri === "string" && videoBlock.uri.length > 0) {
+        const fileId = videoBlock.uri.split("/files/")[1]?.split(/[/:?]/)[0] || "";
+        if (!fileId) throw new Error("video_provider_file_uri_invalid");
+        const fileInfoResponse = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}?key=${encodeURIComponent(key)}`, {
+          signal: AbortSignal.timeout(20000),
+        });
+        const fileInfo = await fileInfoResponse.json().catch(() => null);
+        if (!fileInfoResponse.ok) throw new Error("video_provider_file_status_failed");
+        if (fileInfo?.state === "FAILED") throw new Error("video_provider_file_failed");
+        if (fileInfo?.state !== "ACTIVE") return reply({ ok: true, job_id: job.id, status: "rendering", file_state: fileInfo?.state || "PROCESSING" }, 202);
+        const download = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}:download?alt=media&key=${encodeURIComponent(key)}`, {
+          signal: AbortSignal.timeout(60000),
+        });
+        if (!download.ok) throw new Error("video_provider_download_failed");
+        bytes = new Uint8Array(await download.arrayBuffer());
+      } else {
+        throw new Error("video_provider_output_missing");
+      }
       if (bytes.byteLength < 1024) throw new Error("video_output_too_small");
       const stored = await uploadVideo(job, bytes);
       const sourceAssetId = `${job.id}:veo-v1`;
@@ -165,7 +191,7 @@ Deno.serve(async (req: Request) => {
         qa_status: "pending",
         qa_reason: "AI-generated Elite Media output; human and platform QA required before publication.",
         content_pillar: "ELITE_MEDIA",
-        intelligence: { elite_job_id: job.id, user_id: user.id, provider: "Google Gemini API", model: VIDEO_MODEL, output_format: "mp4", duration_seconds: 8 },
+        intelligence: { elite_job_id: job.id, user_id: user.id, provider: "Google Gemini API", model: VIDEO_MODEL, output_format: "mp4", aspect_ratio: "9:16", resolution: "720p" },
         verified_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: "source_provider,source_asset_id" }).select("id,canonical_url,asset_type,qa_status").single();
