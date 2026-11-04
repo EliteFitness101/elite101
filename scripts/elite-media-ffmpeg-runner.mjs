@@ -108,11 +108,11 @@ async function processJob(job) {
       method:"POST",
       headers:{ "content-type":"application/json", prefer:"resolution=merge-duplicates,return=representation" },
       body:JSON.stringify({
-        source_provider:"elite_gemini_omni_ffmpeg",
+        source_provider:"elite_google_flow_export_ffmpeg",
         source_asset_id:`${job.id}:${resolution}:ffmpeg-actions-v1`,
         source_url:publicUrl, canonical_url:publicUrl, brand:"Elite NG", campaign:"elite_media_generation",
         asset_type:"video", mime_type:"video/mp4", width, height, aspect_ratio:"9:16",
-        rights_status:"gemini_api_generated", commercial_status:"elite_media_generated",
+        rights_status:"unknown", commercial_status:"review_required",
         qa_status:"pending", qa_reason:"FFmpeg derivative; technical profile and public readback verified. Human/platform QA required before publication.",
         content_pillar:"ELITE_MEDIA",
         intelligence:{ elite_job_id:job.id, resolution, codec:stream.codec_name, pixel_format:stream.pix_fmt,
@@ -123,7 +123,7 @@ async function processJob(job) {
     if (!registry?.[0]?.id) throw new Error("Asset registry upsert returned no asset ID");
     const output = {
       ...(job.output || {}),
-      raw_output_url:job.output_url,
+      raw_output_url:job.output?.raw_output_url ?? job.output_url ?? null,
       output_url:publicUrl,
       storage_path:targetPath,
       asset_id:registry[0].id,
