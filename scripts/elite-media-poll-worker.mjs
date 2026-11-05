@@ -2,6 +2,10 @@ const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const secondaryGeminiKey = process.env.GEMINI_AUTOMATION_API_KEY || process.env.GEMINI_API_KEY1 || "";
 console.log("Secondary Gemini provider key configured:", Boolean(secondaryGeminiKey), "source:", process.env.GEMINI_AUTOMATION_API_KEY ? "GEMINI_AUTOMATION_API_KEY" : process.env.GEMINI_API_KEY1 ? "GEMINI_API_KEY1" : "none");
+if (!secondaryGeminiKey) {
+  console.log("No secondary Gemini provider key is available in this repository; ChatB2K-hosted poller owns Omni start/poll to avoid duplicate primary-key retries.");
+  process.exit(0);
+}
 if (!base || !key) throw new Error("Missing Supabase runner credentials");
 
 async function request(path, init = {}) {
