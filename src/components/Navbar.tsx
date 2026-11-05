@@ -53,9 +53,11 @@ export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
             <Link to="/questionnaire" className="text-sm text-amber-200 hover:text-white transition">Get started</Link>
           </nav>
         ) : (
-          <nav className="hidden md:flex items-center gap-4">
-            <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Explore Elite Media</Link>
-            <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">Marketplace</Link>
+          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-5">
+            <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">Discover</Link>
+            <Link to="/auth?role=model" className="text-sm text-muted-foreground hover:text-foreground transition">For Creators</Link>
+            <Link to="/auth?role=brand" className="text-sm text-muted-foreground hover:text-foreground transition">For Brands</Link>
+            <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Elite Media</Link>
             <a href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition">How it works</a>
           </nav>
         )}
