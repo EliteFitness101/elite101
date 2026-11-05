@@ -230,7 +230,7 @@ Deno.serve(async (req: Request) => {
 
     const primaryKey = ["start", "poll"].includes(action) ? await geminiKey() : "";
     const secondaryKey = internalServiceRequest
-      ? String(req.headers.get("x-gemini-automation-key") || Deno.env.get("GEMINI_AUTOMATION_API_KEY") || "").trim()
+      ? String(req.headers.get("x-gemini-automation-key") || Deno.env.get("GEMINI_AUTOMATION_API_KEY") || Deno.env.get("GEMINI_API_KEY1") || "").trim()
       : String(Deno.env.get("GEMINI_AUTOMATION_API_KEY") || "").trim();
     const pollKey = output.provider_key_slot === "automation_secondary" ? secondaryKey : primaryKey;
     if (["start", "poll"].includes(action) && !pollKey && !secondaryKey) return reply({ ok: false, error: "gemini_api_key_missing" }, 503);
