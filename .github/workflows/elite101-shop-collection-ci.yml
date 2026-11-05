@@ -1,0 +1,39 @@
+name: Elite101 Shop Collection CI
+on:
+  push:
+    branches:
+      - feat/elite101-hybrid-collections
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/App.tsx"
+      - "src/pages/ShopCollection.tsx"
+      - "src/integrations/supabase/**"
+      - "package.json"
+      - ".github/workflows/elite101-shop-collection-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elite101-shop-collection-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Lint changed collection route files
+        run: npx eslint src/App.tsx src/pages/ShopCollection.tsx
+      - name: Unit tests
+        run: npm test
+      - name: Production build
+        run: npm run build
