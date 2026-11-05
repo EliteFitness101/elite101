@@ -119,7 +119,7 @@ export function ChatB2KConcierge() {
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-white">{item.title}</p>
                         <p className="mt-1 text-[11px] text-white/55">
-                          {item.price_ngn > 0 ? `₦${Number(item.price_ngn).toLocaleString("en-NG")}` : "Price pending"}
+                          {Number(item.price_ngn || 0) > 0 ? `₦${Number(item.price_ngn).toLocaleString("en-NG")}` : "Price pending"}
                           {" · "}{item.checkout_eligible ? "Checkout eligible" : "Availability confirmation required"}
                         </p>
                       </div>
