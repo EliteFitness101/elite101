@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 
 type Offer = {
   slug: string;
+  video: string;
   name: string;
   eyebrow: string;
   price: number;
@@ -102,7 +103,7 @@ const offers: Offer[] = [
 
 const faqs = [
   { q: "Are these prices final?", a: "The listed USD amounts are the current displayed plan prices. Your secure order review confirms the charge currency, exact amount, and applicable taxes before you authorize payment. For managed production, clip volume, delivery window, storage, and revision allowance are confirmed in your proposal." },
-  { q: "Do you automatically capture and publish my livestreams?", a: "Connected and verified integrations can automate supported capture, processing, and publishing steps. If an integration is not active in your account, you can still submit authorized media for production with review and delivery. Your workspace should show which connections are available." },
+  { q: "Do you automatically capture and publish my livestreams?", a: "Only integrations marked active and tested in your workspace should be treated as automated. When enabled, they can automate supported capture, processing, and publishing steps. Otherwise, you can submit authorized media for production with review and delivery." },
   { q: "Can I use Elite Ng from Nigeria and internationally?", a: "The offer is designed for Nigerian and international creators. Checkout currency, payment methods, settlement eligibility, and taxes are confirmed by the enabled payment provider at checkout." },
   { q: "Can I cancel a subscription?", a: "Monthly plans renew automatically. Open Manage subscription in the footer, enter the checkout email and payment reference, then review or cancel through Paystack’s secure management page. Cancellation stops future renewals; any already-paid period remains subject to the provider’s subscription status." },
   { q: "What content can I submit?", a: "Submit only media you own or are authorized to process. You remain responsible for the necessary creator, platform, music, and third-party permissions." },
