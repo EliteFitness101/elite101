@@ -104,14 +104,18 @@ Deno.serve(async (req: Request) => {
       await ensureBucket();
       if (output.provider_interaction_id && job.status === "rendering") return reply({ ok: true, job_id: job.id, status: job.status, interaction_submitted: true });
       if (job.status !== "queued" && job.status !== "failed") return reply({ ok: false, error: "job_not_startable", status: job.status }, 409);
-      const topic = String(job.input?.prompt || job.input?.topic || "").trim();
-      if (!topic) return reply({ ok: false, error: "render_topic_missing" }, 400);
+      const topic = String(job.input?.topic || "").trim();
+      const customPrompt = String(job.input?.prompt || "").trim();
+      const aspectRatio = job.input?.aspect_ratio === "16:9" ? "16:9" : "9:16";
+      if (!topic && !customPrompt) return reply({ ok: false, error: "render_prompt_missing" }, 400);
       delete output.provider_operation;
       delete output.provider_interaction_id;
+      delete output.provider_video_uri;
       delete output.provider_error;
       delete output.provider_http_status;
-      const prompt = "Create an original, rights-cleared premium vertical social video for Elite Media. Topic: " + topic.slice(0, 500) +
-        ". Portrait 9:16, polished cinematic motion, clear subject, strong opening, natural movement, polished Nigerian/African lifestyle context where relevant, no fabricated testimonials, no unverified claims, no logos or text artifacts, no copyrighted characters or music. Use a coherent short-form social-video sequence and end with a clean final frame suitable for an accurate CTA overlay.";
+      const prompt = (customPrompt || ("Create an original, rights-cleared Elite Media video about: " + topic +
+        ". " + (aspectRatio === "16:9" ? "Landscape 16:9 website hero composition." : "Portrait 9:16 mobile-first composition.") +
+        " Premium obsidian and champagne-gold visual direction, clear subject, natural cinematic motion, accurate claims only, no fake interface text, no logos, no copyrighted characters or music.")).slice(0, 5000);
       const response = await fetch(`${GEMINI_API}/interactions`, {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": key },
@@ -119,7 +123,7 @@ Deno.serve(async (req: Request) => {
           model: VIDEO_MODEL,
           input: prompt,
           background: true,
-          response_format: { type: "video", delivery: "uri", aspect_ratio: job.input?.aspect_ratio === "16:9" ? "16:9" : "9:16" },
+          response_format: { type: "video", delivery: "uri", aspect_ratio: aspectRatio },
           generation_config: { video_config: { task: "text_to_video" } },
         }),
         signal: AbortSignal.timeout(30000),
@@ -133,6 +137,7 @@ Deno.serve(async (req: Request) => {
       output.provider = "google_gemini_omni";
       output.model = VIDEO_MODEL;
       output.provider_interaction_id = payload.id;
+      output.aspect_ratio = aspectRatio;
       const initialVideo = (payload?.steps || []).filter((step: any) => step?.type === "model_output").flatMap((step: any) => Array.isArray(step?.content) ? step.content : []).find((item: any) => item?.type === "video") || payload?.output_video || null;
       if (typeof initialVideo?.uri === "string") output.provider_video_uri = initialVideo.uri;
       output.provider_status = payload.status || "in_progress";
