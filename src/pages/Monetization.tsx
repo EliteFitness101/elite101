@@ -132,6 +132,7 @@ function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstim
       <p className="elite-kicker mb-3">{offer.eyebrow}</p>
       <h3 className="pr-2 text-2xl font-semibold tracking-tight">{offer.name}</h3>
       <p className="mt-3 min-h-[4.5rem] text-sm leading-6 text-white/60">{offer.description}</p>
+      <p className="mt-3 rounded-xl border border-[#e7c36f]/15 bg-white/[0.025] p-3 text-sm leading-6 text-white/75">{offer.outcome}</p>
       <div className="mt-6 flex items-baseline gap-2">
         <span className="text-4xl font-semibold tracking-tight text-[#f4d58b]">{formatUsd(offer.price)}</span>
         <span className="text-sm text-white/45">/{offer.period}</span>
