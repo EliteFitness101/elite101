@@ -5,6 +5,16 @@ import { ArrowRight, Bot, Globe2, MessageCircle, Mic, Send, ShieldCheck, Sparkle
 import { supabase } from "@/integrations/supabase/client";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+type CommerceRecommendation = {
+  sku: string;
+  title: string;
+  handle: string;
+  fulfillment_mode: string;
+  price_ngn: number | null;
+  inventory_qty: number;
+  product_path: string;
+  checkout_eligible: boolean;
+};
 const prompts = [
   { label: "Explore services", text: "Help me explore Elite Media services and choose the right starting point.", to: "/explore" },
   { label: "Start onboarding", text: "Guide me through onboarding.", to: "/explore#start" },
@@ -22,6 +32,8 @@ export function ChatB2KConcierge() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Welcome. I’m ChatB2K Omni. Tell me your goal and I’ll help you choose a clear next step. I’ll be compassionate with your circumstances and firm about what moves you forward." },
   ]);
+  const [recommendations, setRecommendations] = useState<CommerceRecommendation[]>([]);
+  const [catalogGap, setCatalogGap] = useState<string[]>([]);
   const [answerTo, setAnswerTo] = useState("/explore");
   const navigate = useNavigate();
 
@@ -33,11 +45,33 @@ export function ChatB2KConcierge() {
     setMessage("");
     setBusy(true);
     try {
+      const normalized = text.toLowerCase();
+      const intent = /bigo|creator|stream|tiktok|youtube|gimbal|microphone|ring light|studio/.test(normalized)
+        ? "creator"
+        : /course|masterclass|toolkit|digital|template/.test(normalized)
+          ? "digital"
+          : /coach|booking|consult/.test(normalized)
+            ? "coaching"
+            : "fitness";
+      const host = window.location.hostname.endsWith("vercel.app")
+        ? "elite.resofit.fit"
+        : window.location.hostname;
+      const recommendationsPromise = supabase.functions.invoke("chatb2k-commerce-recommendations", {
+        body: { domain: host, intent, limit: 4 },
+      }).catch(() => ({ data: null, error: null }));
       const { data, error } = await supabase.functions.invoke("chatb2k-live-assistant", {
         body: { message: text, persona: persona === "mavia" ? "mavia" : "coach-b2k", history },
       });
       if (error) throw error;
       if (!data?.ok || typeof data.reply !== "string") throw new Error(data?.error || "Live assistant did not return a reply.");
+      const recommendationResult = await recommendationsPromise;
+      if (recommendationResult.data?.ok) {
+        setRecommendations(Array.isArray(recommendationResult.data.recommendations) ? recommendationResult.data.recommendations : []);
+        setCatalogGap(Array.isArray(recommendationResult.data.catalog_gap) ? recommendationResult.data.catalog_gap : []);
+      } else {
+        setRecommendations([]);
+        setCatalogGap([]);
+      }
       setMessages((old) => [...old, { role: "assistant", content: data.reply }]);
     } catch {
       setMessages((old) => [...old, { role: "assistant", content: "ChatB2K is temporarily unavailable. Your message has not been actioned. Please try again shortly, or use one of the guided options below." }]);
@@ -77,6 +111,26 @@ export function ChatB2KConcierge() {
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((item, index) => <div key={index} className={`max-w-[95%] whitespace-pre-wrap rounded-2xl p-3 text-sm leading-6 ${item.role === "user" ? "ml-auto rounded-tr-sm border border-amber-100/15 bg-amber-100/10 text-white" : "rounded-tl-sm border border-white/10 bg-white/[0.055] text-white/85"}`}>{item.content}</div>)}
               {busy && <div className="flex items-center gap-2 rounded-2xl border border-amber-200/15 bg-amber-200/[0.06] p-3 text-xs text-amber-100"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-200" /> ChatB2K is thinking…</div>}
+              {(recommendations.length > 0 || catalogGap.length > 0) && (
+                <section className="space-y-2 rounded-2xl border border-amber-200/20 bg-amber-200/[0.045] p-3" aria-label="ChatB2K commerce recommendations">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-100"><Sparkles className="h-3.5 w-3.5" /> Relevant catalogue matches</div>
+                  {recommendations.map((item) => (
+                    <div key={item.sku} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 p-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-white">{item.title}</p>
+                        <p className="mt-1 text-[11px] text-white/55">
+                          {item.price_ngn > 0 ? `₦${Number(item.price_ngn).toLocaleString("en-NG")}` : "Price pending"}
+                          {" · "}{item.checkout_eligible ? "Checkout eligible" : "Availability confirmation required"}
+                        </p>
+                      </div>
+                      <a href={`https://resofit.fit${item.product_path}`} target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-amber-200/30 px-3 py-2 text-[10px] font-semibold text-amber-100 hover:bg-amber-200/10">
+                        View
+                      </a>
+                    </div>
+                  ))}
+                  {catalogGap.length > 0 && <p className="text-[11px] leading-5 text-amber-100/75">Creator hardware is in sourcing verification and is not available for checkout yet.</p>}
+                </section>
+              )}
               <div className="flex flex-wrap gap-2">{prompts.map((item) => <button key={item.label} onClick={() => { setAnswerTo(item.to); void sendMessage(item.text); }} disabled={busy} className="rounded-full border border-white/15 bg-white/[0.035] px-3 py-2 text-xs text-white/75 transition hover:border-amber-200/50 hover:bg-amber-200/10 disabled:opacity-40">{item.label}</button>)}</div>
             </div>
             <div className="flex items-center justify-between border-t border-white/10 px-4 py-2">
