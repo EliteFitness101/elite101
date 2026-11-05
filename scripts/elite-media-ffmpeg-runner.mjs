@@ -74,6 +74,12 @@ async function processJob(job) {
 
   const sourcePath = job.output?.storage_path;
   const sourceBucket = job.output?.storage_bucket === "resofit-paid-deliverables" ? "resofit-paid-deliverables" : "digital-product-media";
+  const originProvider = job.output?.provider || job.input?.provider || job.output?.source || "unknown";
+  const registryProvider = originProvider === "google_flow_consumer" || originProvider === "google_flow_export"
+    ? "elite_google_flow_export_ffmpeg"
+    : originProvider === "google_gemini_omni" || originProvider === "gemini_api"
+      ? "elite_gemini_api_ffmpeg"
+      : "elite_media_ffmpeg";
   const expectedPrefix = `elite-media/${job.user_id}/${job.id}/`;
   if (typeof sourcePath !== "string" || !sourcePath.startsWith(expectedPrefix) || sourcePath.includes("..") || !sourcePath.endsWith("/final.mp4")) {
     throw new Error("Source storage path does not match the owned Elite job");
@@ -128,20 +134,20 @@ async function processJob(job) {
       method:"POST",
       headers:{ "content-type":"application/json", prefer:"resolution=merge-duplicates,return=representation" },
       body:JSON.stringify({
-        source_provider:"elite_google_flow_export_ffmpeg",
+        source_provider:registryProvider,
         source_asset_id:`${job.id}:${resolution}:ffmpeg-actions-v1`,
         source_url:publicUrl, canonical_url:publicUrl, brand:"Elite NG", campaign:"elite_media_generation",
         asset_type:"video", mime_type:"video/mp4", width, height, aspect_ratio:"9:16",
         rights_status:"unknown", commercial_status:"review_required",
         qa_status:"pending", qa_reason:"FFmpeg derivative; technical profile and public readback verified. Human/platform QA required before publication.",
         origin_review_status:"pending",
-        content_origin:{ provider:"google_flow_consumer", mode:"consumer_ui_export", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+        content_origin:{ provider:originProvider, mode:job.output?.provider_mode || job.input?.source || "automated_generation", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
           raw_storage_path:job.output?.storage_path ?? sourcePath, raw_sha256:job.output?.sha256 ?? null,
           original_filename:job.output?.original_filename ?? null, ingested_at:job.output?.ingested_at ?? null },
-        rights_evidence:{ status:"pending_review", provider:"google_flow_consumer", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+        rights_evidence:{ status:"pending_review", provider:originProvider, raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
           raw_storage_path:job.output?.storage_path ?? sourcePath, raw_sha256:job.output?.sha256 ?? null },
         content_pillar:"ELITE_MEDIA",
-        intelligence:{ elite_job_id:job.id, source_provider:"google_flow_consumer", raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+        intelligence:{ elite_job_id:job.id, source_provider:originProvider, raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
           raw_storage_path:job.output?.storage_path ?? sourcePath, resolution, codec:stream.codec_name, pixel_format:stream.pix_fmt,
           byte_size:rendered.length, sha256:digest, renderer:"GitHub Actions FFmpeg" },
         verified_at:new Date().toISOString(), updated_at:new Date().toISOString()
