@@ -24,6 +24,7 @@ type ManifestItem = {
 
 type CatalogProduct = {
   id: string;
+  published?: boolean;
   sku: string;
   handle: string;
   title: string;
