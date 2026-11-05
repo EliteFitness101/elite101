@@ -51,13 +51,15 @@ async function workerHealth() {
   return { http_status: response.status, ...(body || {}) };
 }
 async function workerRequest(method: string, key: string, token: string, body?: Uint8Array, type = "application/octet-stream") {
-  const url = publicBase + "/" + key.split("/").map(encodeURIComponent).join("/");
+  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+  const upload = method === "PUT";
+  const url = upload ? "https://upload.resofit.fit/?key=" + encodeURIComponent(key) : publicBase + "/" + encodedKey;
   const headers = new Headers({ Authorization: "Bearer " + token });
-  if (method === "PUT") headers.set("Content-Type", type);
+  if (upload) headers.set("Content-Type", type);
   return await fetch(url, {
-    method,
+    method: upload ? "POST" : method,
     headers,
-    body: method === "PUT" && body ? body : undefined,
+    body: upload && body ? body : undefined,
     redirect: "error",
     signal: AbortSignal.timeout(60000),
   });
@@ -70,8 +72,11 @@ async function healthStatus() {
   try {
     const token = await writeToken();
     const worker = await workerHealth();
-    const ready = worker.http_status === 200 && worker.ok === true && worker.bucket_binding_ready === true;
-    return { service: "resofit-media-control-plane", status: ready ? "READY" : "DEGRADED", storage_provider: "cloudflare_r2_worker", bucket: "resofit-cdn", public_base_url: publicBase, r2_write_token_configured: !!token, worker };
+    const uploadResponse = await fetch("https://upload.resofit.fit/health", { signal: AbortSignal.timeout(15000) });
+    const uploadWorker = await uploadResponse.json().catch(() => null);
+    const ready = worker.http_status === 200 && worker.ok === true && worker.bucket_binding_ready === true &&
+      uploadResponse.status === 200 && uploadWorker?.bucket_binding_ready === true;
+    return { service: "resofit-media-control-plane", status: ready ? "READY" : "DEGRADED", storage_provider: "cloudflare_r2_worker", bucket: "resofit-cdn", public_base_url: publicBase, r2_write_token_configured: !!token, worker, upload_worker: { http_status: uploadResponse.status, ...(uploadWorker || {}) } };
   } catch (error) {
     return { service: "resofit-media-control-plane", status: "DEGRADED", storage_provider: "cloudflare_r2_worker", public_base_url: publicBase, detail: String(error).slice(0, 180) };
   }
