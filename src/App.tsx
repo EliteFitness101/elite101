@@ -29,6 +29,7 @@ const Pathways = lazy(() => import("./pages/Pathways"));
 const Auth = lazy(() => import("./pages/Auth"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
+const ShopCollection = lazy(() => import("./pages/ShopCollection"));
 const ModelProfile = lazy(() => import("./pages/ModelProfile"));
 const ModelOnboarding = lazy(() => import("./pages/onboarding/ModelOnboarding"));
 const BrandOnboarding = lazy(() => import("./pages/onboarding/BrandOnboarding"));
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/pathways" element={<Pathways />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/shop/collection/:slug" element={<ShopCollection />} />
             <Route path="/models/:id" element={<ModelProfile />} />
             <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
