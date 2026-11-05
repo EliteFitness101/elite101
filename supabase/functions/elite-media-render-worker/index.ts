@@ -74,9 +74,9 @@ Deno.serve(async (req: Request) => {
     if (!token) return reply({ ok: false, error: "authentication_required" }, 401);
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "status");
-    const internalPoll = token === serviceKey && action === "poll";
+    const internalServiceRequest = token === serviceKey && ["start", "poll"].includes(action);
     let userId = "";
-    if (internalPoll) {
+    if (internalServiceRequest) {
       userId = String(body.user_id || "").trim();
       if (!userId) return reply({ ok: false, error: "internal_poll_user_id_required" }, 400);
     } else {
@@ -89,6 +89,9 @@ Deno.serve(async (req: Request) => {
     const owned = await getOwnedJob(jobId, userId);
     if (!owned) return reply({ ok: false, error: "entitled_job_not_found" }, 404);
     const job = owned.job;
+    if (internalServiceRequest && action === "start" && job.input?.start_automatically !== true) {
+      return reply({ ok: false, error: "automatic_start_not_enabled_for_job" }, 403);
+    }
     if (job.job_type !== "video_render") return reply({ ok: false, error: "mp4_video_render_jobs_only; hls_requires_a_separate_transcode_worker" }, 409);
     const output = { ...(job.output || {}) };
 
