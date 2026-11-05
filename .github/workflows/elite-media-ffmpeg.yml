@@ -7,6 +7,7 @@ on:
       - '.github/workflows/elite-media-ffmpeg.yml'
       - 'scripts/elite-media-ffmpeg-runner.mjs'
       - 'scripts/elite-media-poll-worker.mjs'
+      - 'supabase/functions/elite-media-render-worker/index.ts'
   workflow_dispatch:
     inputs:
       job_id:
