@@ -38,6 +38,13 @@ type CatalogProduct = {
 };
 
 type ResolvedItem = { manifest: ManifestItem; product?: CatalogProduct | null };
+type CollectionPage = {
+  status: string;
+  version: number;
+  canonical_path: string;
+  manifest?: { title?: string; description?: string; filters?: string[]; items?: ManifestItem[] };
+  seo?: { title?: string; description?: string };
+};
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -58,7 +65,7 @@ const formatNgn = (value: number) => new Intl.NumberFormat("en-NG", {
 
 export default function ShopCollection() {
   const { slug = "" } = useParams();
-  const [collection, setCollection] = useState<any>(null);
+  const [collection, setCollection] = useState<CollectionPage | null>(null);
   const [items, setItems] = useState<ResolvedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -79,7 +86,7 @@ export default function ShopCollection() {
     setCart({});
     void (async () => {
       try {
-        const result = await catalogGet<{ data?: any[] }>(`collections?slug=${encodeURIComponent(slug)}`);
+        const result = await catalogGet<{ data?: CollectionPage[] }>(`collections?slug=${encodeURIComponent(slug)}`);
         const page = (result.data ?? []).find((entry) => entry.status === "published");
         if (!page) throw new Error("This collection is not published yet.");
         const manifestItems: ManifestItem[] = Array.isArray(page.manifest?.items) ? page.manifest.items : [];
