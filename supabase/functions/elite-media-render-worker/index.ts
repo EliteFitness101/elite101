@@ -4,7 +4,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const url = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
-const BUCKET = "digital-product-media";
+const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta";
+const VIDEO_MODEL = "gemini-omni-1.1-flash";
+const BUCKET = "resofit-paid-deliverables";
 const cors = {
   "Access-Control-Allow-Origin": "https://elite.resofit.fit",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -13,6 +15,12 @@ const cors = {
   "Cache-Control": "no-store",
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: cors });
+
+async function geminiKey() {
+  const { data, error } = await admin.rpc("get_digital_product_factory_gemini_key");
+  if (error || !data) throw new Error("gemini_api_key_missing");
+  return String(data);
+}
 
 async function getOwnedJob(jobId: string, userId: string) {
   const { data: job, error } = await admin.from("elite_media_generation_jobs")
@@ -34,44 +42,178 @@ async function getOwnedJob(jobId: string, userId: string) {
   return entitled ? { job, request } : null;
 }
 
+async function ensureBucket() {
+  const current = await admin.storage.getBucket(BUCKET);
+  if (current.error || !current.data) throw new Error("private_raw_media_bucket_unavailable");
+  if (current.data.public !== false) throw new Error("raw_media_bucket_must_remain_private");
+  if (Number(current.data.file_size_limit || 0) < 45 * 1024 * 1024) throw new Error("raw_media_bucket_limit_below_45_mib");
+}
+
+async function uploadVideo(job: any, bytes: Uint8Array) {
+  if (bytes.byteLength < 12 || bytes.byteLength > 45 * 1024 * 1024 || new TextDecoder().decode(bytes.slice(4, 8)) !== "ftyp") throw new Error("provider_output_failed_mp4_signature_or_size_validation");
+  const path = `elite-media/${job.user_id}/${job.id}/final.mp4`;
+  const bucket = admin.storage.from(BUCKET);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const sha256 = Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, "0")).join("");
+  const uploaded = await bucket.upload(path, bytes, { contentType: "video/mp4", upsert: true });
+  if (uploaded.error) throw uploaded.error;
+  const readback = await bucket.download(path);
+  if (readback.error || !readback.data) throw new Error("private_raw_mp4_readback_failed");
+  const readbackBytes = new Uint8Array(await readback.data.arrayBuffer());
+  const readbackDigest = await crypto.subtle.digest("SHA-256", readbackBytes);
+  const readbackSha256 = Array.from(new Uint8Array(readbackDigest)).map(v => v.toString(16).padStart(2, "0")).join("");
+  if (readbackBytes.byteLength !== bytes.byteLength || readbackSha256 !== sha256) throw new Error("private_raw_mp4_integrity_check_failed");
+  return { path, bytes: bytes.byteLength, sha256 };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return reply({ ok: false, error: "method_not_allowed" }, 405);
   try {
     const token = req.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
     if (!token) return reply({ ok: false, error: "authentication_required" }, 401);
-    const { data: { user }, error: authError } = await admin.auth.getUser(token);
-    if (authError || !user || !user.email_confirmed_at) return reply({ ok: false, error: "verified_account_required" }, 401);
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "status");
+    const internalPoll = token === serviceKey && action === "poll";
+    let userId = "";
+    if (internalPoll) {
+      userId = String(body.user_id || "").trim();
+      if (!userId) return reply({ ok: false, error: "internal_poll_user_id_required" }, 400);
+    } else {
+      const { data: { user }, error: authError } = await admin.auth.getUser(token);
+      if (authError || !user || !user.email_confirmed_at) return reply({ ok: false, error: "verified_account_required" }, 401);
+      userId = user.id;
+    }
     const jobId = String(body.job_id || "").trim();
     if (!jobId) return reply({ ok: false, error: "job_id_required" }, 400);
-    const owned = await getOwnedJob(jobId, user.id);
+    const owned = await getOwnedJob(jobId, userId);
     if (!owned) return reply({ ok: false, error: "entitled_job_not_found" }, 404);
     const job = owned.job;
     if (job.job_type !== "video_render") return reply({ ok: false, error: "mp4_video_render_jobs_only; hls_requires_a_separate_transcode_worker" }, 409);
-    if (action === "start") return reply({ ok: false, error: "server_side_video_generation_disabled_use_elite_media_flow_ingest" }, 409);
     const output = { ...(job.output || {}) };
-    if (output.ffmpeg_render_pending === true) {
-      return reply({ ok: true, job_id: job.id, status: "rendering", ffmpeg_queued: true }, 202);
-    }
 
     if (action === "status") {
       return reply({ ok: true, job_id: job.id, status: job.status, output_url: job.output_url, output });
     }
 
-    if (action === "start" || action === "poll") {
-      return reply({
-        ok: false,
-        error: "server_side_gemini_video_generation_disabled",
-        supported_mode: "google_flow_consumer_export",
-        next_action: "upload_google_flow_export_to_elite_media_flow_ingest",
-        billing: "No Gemini Developer API request was made."
-      }, 409);
+    const key = await geminiKey();
+    if (action === "start") {
+      await ensureBucket();
+      if (output.provider_interaction_id && job.status === "rendering") return reply({ ok: true, job_id: job.id, status: job.status, interaction_submitted: true });
+      if (job.status !== "queued" && job.status !== "failed") return reply({ ok: false, error: "job_not_startable", status: job.status }, 409);
+      const topic = String(job.input?.prompt || job.input?.topic || "").trim();
+      if (!topic) return reply({ ok: false, error: "render_topic_missing" }, 400);
+      delete output.provider_operation;
+      delete output.provider_interaction_id;
+      delete output.provider_error;
+      delete output.provider_http_status;
+      const prompt = "Create an original, rights-cleared premium vertical social video for Elite Media. Topic: " + topic.slice(0, 500) +
+        ". Portrait 9:16, polished cinematic motion, clear subject, strong opening, natural movement, polished Nigerian/African lifestyle context where relevant, no fabricated testimonials, no unverified claims, no logos or text artifacts, no copyrighted characters or music. Use a coherent short-form social-video sequence and end with a clean final frame suitable for an accurate CTA overlay.";
+      const response = await fetch(`${GEMINI_API}/interactions`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          model: VIDEO_MODEL,
+          input: prompt,
+          background: true,
+          response_format: { type: "video", delivery: "uri", aspect_ratio: job.input?.aspect_ratio === "16:9" ? "16:9" : "9:16" },
+          generation_config: { video_config: { task: "text_to_video" } },
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.id) {
+        const reason = String(payload?.error?.message || payload?.message || "provider_request_rejected").slice(0, 240);
+        await admin.from("elite_media_generation_jobs").update({ status: "failed", output: { ...output, provider_error: reason, provider_http_status: response.status }, updated_at: new Date().toISOString() }).eq("id", job.id);
+        return reply({ ok: false, error: "video_provider_submission_failed", provider_status: response.status, detail: reason }, 502);
+      }
+      output.provider = "google_gemini_omni";
+      output.model = VIDEO_MODEL;
+      output.provider_interaction_id = payload.id;
+      const initialVideo = (payload?.steps || []).filter((step: any) => step?.type === "model_output").flatMap((step: any) => Array.isArray(step?.content) ? step.content : []).find((item: any) => item?.type === "video") || payload?.output_video || null;
+      if (typeof initialVideo?.uri === "string") output.provider_video_uri = initialVideo.uri;
+      output.provider_status = payload.status || "in_progress";
+      output.submitted_at = new Date().toISOString();
+      const { error } = await admin.from("elite_media_generation_jobs")
+        .update({ status: "rendering", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+      if (error) throw error;
+      return reply({ ok: true, job_id: job.id, status: "rendering", interaction_submitted: true }, 202);
     }
-    return reply({ ok: false, error: "unsupported_action", supported_actions: ["status"] }, 400);
-  } catch (e) {
-    console.error("elite-media-render-worker", e);
-    return reply({ ok: false, error: "render_worker_failed" }, 500);
+
+    if (action === "poll") {
+      if (output.ffmpeg_render_pending === true) {
+        return reply({ ok: true, job_id: job.id, status: "rendering", ffmpeg_queued: true, resolution: output.ffmpeg_resolution || "320p" }, 202);
+      }
+      if (job.status === "ready" && job.output_url) {
+        return reply({ ok: true, job_id: job.id, status: "ready", output_url: job.output_url, asset_id: output.asset_id || null, qa_status: output.qa_status || "pending" });
+      }
+      const interactionId = String(output.provider_interaction_id || "");
+      if (!interactionId) return reply({ ok: false, error: "provider_interaction_not_submitted" }, 409);
+      const poll = await fetch(`${GEMINI_API}/interactions/${encodeURIComponent(interactionId)}`, {
+        headers: { "x-goog-api-key": key },
+        signal: AbortSignal.timeout(30000),
+      });
+      const state = await poll.json().catch(() => null);
+      if (!poll.ok) return reply({ ok: false, error: "video_provider_poll_failed", provider_status: poll.status }, 502);
+      if (state?.status === "failed") {
+        output.provider_error = String(state?.error?.message || state?.error || "video_generation_failed").slice(0, 240);
+        await admin.from("elite_media_generation_jobs").update({ status: "failed", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+        return reply({ ok: false, error: "video_generation_failed" }, 502);
+      }
+      if (state?.status !== "completed") return reply({ ok: true, job_id: job.id, status: "rendering", completed: false }, 202);
+      const videoBlock = output.provider_video_uri ? { uri: output.provider_video_uri } :
+        (state?.steps || []).filter((step: any) => step?.type === "model_output")
+          .flatMap((step: any) => Array.isArray(step?.content) ? step.content : [])
+          .find((item: any) => item?.type === "video") || state?.output_video || null;
+      let bytes: Uint8Array;
+      if (typeof videoBlock?.data === "string" && videoBlock.data.length > 0) {
+        const binary = atob(videoBlock.data);
+        bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      } else if (typeof videoBlock?.uri === "string" && videoBlock.uri.length > 0) {
+        const fileId = videoBlock.uri.match(/(?:^|\/)files\/([^/?#:]+)/)?.[1] || "";
+        if (!fileId) throw new Error("video_provider_file_uri_invalid");
+        const fileInfoResponse = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}`, {
+          headers: { "x-goog-api-key": key },
+          signal: AbortSignal.timeout(20000),
+        });
+        const fileInfo = await fileInfoResponse.json().catch(() => null);
+        if (!fileInfoResponse.ok) throw new Error("video_provider_file_status_failed");
+        if (fileInfo?.state === "FAILED") throw new Error("video_provider_file_failed");
+        if (fileInfo?.state !== "ACTIVE") return reply({ ok: true, job_id: job.id, status: "rendering", file_state: fileInfo?.state || "PROCESSING" }, 202);
+        const download = await fetch(`${GEMINI_API}/files/${encodeURIComponent(fileId)}:download?alt=media`, {
+          headers: { "x-goog-api-key": key },
+          signal: AbortSignal.timeout(60000),
+        });
+        if (!download.ok) throw new Error("video_provider_download_failed");
+        bytes = new Uint8Array(await download.arrayBuffer());
+      } else {
+        throw new Error("video_provider_output_missing");
+      }
+      if (bytes.byteLength < 1024) throw new Error("video_output_too_small");
+      const stored = await uploadVideo(job, bytes);
+      output.provider = "google_gemini_omni";
+      output.model = VIDEO_MODEL;
+      output.mime_type = "video/mp4";
+      output.byte_size = stored.bytes;
+      output.storage_bucket = BUCKET;
+      output.storage_path = stored.path;
+      output.sha256 = stored.sha256;
+      output.raw_readback_verified = true;
+      output.ffmpeg_render_pending = true;
+      output.ffmpeg_resolution = job.input?.resolution === "720p" ? "720p" : "320p";
+      output.qa_status = "pending";
+      output.ffmpeg_queued_at = new Date().toISOString();
+      output.completed_at = new Date().toISOString();
+      const { error: updateError } = await admin.from("elite_media_generation_jobs")
+        .update({ status: "rendering", output_url: null, output, updated_at: new Date().toISOString() }).eq("id", job.id);
+      if (updateError) throw updateError;
+      return reply({ ok: true, job_id: job.id, status: "rendering", ffmpeg_queued: true, raw_readback_verified: true, resolution: output.ffmpeg_resolution }, 202);
+    }
+
+    return reply({ ok: false, error: "unsupported_action", supported_actions: ["start", "poll", "status"] }, 400);
+  } catch (error) {
+    console.error("elite-media-render-worker", String(error));
+    return reply({ ok: false, error: "render_worker_failed", detail: error instanceof Error ? error.message.slice(0, 240) : "unknown" }, 500);
   }
 });
