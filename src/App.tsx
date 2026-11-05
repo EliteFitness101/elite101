@@ -8,23 +8,40 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import Pathways from "./pages/Pathways";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import Marketplace from "./pages/Marketplace";
-import ModelProfile from "./pages/ModelProfile";
-import ModelOnboarding from "./pages/onboarding/ModelOnboarding";
-import BrandOnboarding from "./pages/onboarding/BrandOnboarding";
-import ModelDashboard from "./pages/dashboard/ModelDashboard";
-import BrandDashboard from "./pages/dashboard/BrandDashboard";
-import AdminDashboard from "./pages/dashboard/AdminDashboard";
-import NewCampaign from "./pages/campaigns/NewCampaign";
-import CampaignMatches from "./pages/campaigns/CampaignMatches";
-import BookingSuccess from "./pages/BookingSuccess";
-import Questionnaire from "./pages/Questionnaire";
-import EliteCheckout from "./pages/EliteCheckout";
-import EliteManageSubscription from "./pages/EliteManageSubscription";
-import BrandGrowth from "./pages/BrandGrowth";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const Pathways = lazy(() => import("./pages/Pathways"));
+const Auth = lazy(() => import("./pages/Auth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Marketplace = lazy(() => import("./pages/Marketplace"));
+const ModelProfile = lazy(() => import("./pages/ModelProfile"));
+const ModelOnboarding = lazy(() => import("./pages/onboarding/ModelOnboarding"));
+const BrandOnboarding = lazy(() => import("./pages/onboarding/BrandOnboarding"));
+const ModelDashboard = lazy(() => import("./pages/dashboard/ModelDashboard"));
+const BrandDashboard = lazy(() => import("./pages/dashboard/BrandDashboard"));
+const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard"));
+const NewCampaign = lazy(() => import("./pages/campaigns/NewCampaign"));
+const CampaignMatches = lazy(() => import("./pages/campaigns/CampaignMatches"));
+const BookingSuccess = lazy(() => import("./pages/BookingSuccess"));
+const Questionnaire = lazy(() => import("./pages/Questionnaire"));
+const EliteCheckout = lazy(() => import("./pages/EliteCheckout"));
+const EliteManageSubscription = lazy(() => import("./pages/EliteManageSubscription"));
+const BrandGrowth = lazy(() => import("./pages/BrandGrowth"));
 const Explore = lazy(() => import("./pages/Explore"));
 const EliteMediaDashboard = lazy(() => import("./pages/dashboard/EliteMediaDashboard"));
 const Monetization = lazy(() => import("./pages/Monetization"));
@@ -40,6 +57,7 @@ const App = () => (
       <Sonner theme="dark" />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading Elite NG…</div>}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/explore" element={<Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Preparing your Elite experience…</div>}><Explore /></Suspense>} />
@@ -66,6 +84,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           <Suspense fallback={null}><ChatB2KConcierge /></Suspense>
         </AuthProvider>
       </BrowserRouter>
