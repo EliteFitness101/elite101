@@ -101,31 +101,31 @@ const Index = () => {
           <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-8">
             <Sparkles className="h-3.5 w-3.5 text-gold" />
             <span className="text-xs tracking-wider uppercase text-muted-foreground">
-              ResoFlex™ Powered • Made for Africa
+              Africa-rooted • Built for the world
             </span>
           </div>
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl leading-[0.95] mb-6">
-            Nigeria's <span className="text-gradient-luxe">elite</span>
-            <br /> modeling marketplace
+            Talent. <span className="text-gradient-luxe">Influence.</span>
+            <br /> Opportunity. Without borders.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-            Discover and book fashion, beauty, and creator talent through one streamlined marketplace —
-            or build your creator profile to explore brand opportunities.
+            A creator and talent marketplace connecting exceptional people, brands and agencies —
+            from Africa to the world. Build your profile, discover talent and grow your next opportunity.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg" className="bg-gold text-primary-foreground hover:opacity-90 glow-gold text-base h-12 px-8">
               <Link to="/auth?role=model&intent=become-model">
-                Become a Model <ArrowRight className="ml-2 h-4 w-4" />
+                For Creators <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-neon text-neon hover:bg-neon/10 text-base h-12 px-8">
               <Link to="/auth?role=brand&intent=book-talent">
-                Book Talent <ArrowRight className="ml-2 h-4 w-4" />
+                Find Talent <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-amber-300/70 text-amber-200 hover:bg-amber-300/10 text-base h-12 px-8">
               <Link to="/questionnaire">
-                Apply as a BIGO Host <ArrowRight className="ml-2 h-4 w-4" />
+                Become a Live Host <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-white/20 text-white hover:bg-white/10 text-base h-12 px-8">
@@ -139,9 +139,9 @@ const Index = () => {
           {/* Visual pathway cards: real media assets, not placeholder metric tiles */}
           <div className="mx-auto mt-16 grid max-w-5xl gap-4 text-left sm:grid-cols-3">
             {[
-              { src: "/Creator_applying_for_streaming_role_20261017010020.mp4", title: "Build your profile", text: "Introduce your skills and creator interests.", to: "/auth?role=model&intent=become-model" },
-              { src: "/Livestream_host_recruitment_video_20261017005535.mp4", title: "Explore live creator work", text: "Review the creator pathway and its requirements.", to: "/pathways?intent=bigo" },
-              { src: "/Creator_filming_travel_content_20261017005213.mp4", title: "Find your next step", text: "Explore talent discovery and brand opportunities.", to: "/marketplace" },
+              { src: "/Creator_applying_for_streaming_role_20261017010020.mp4", title: "For Creators", text: "Build your profile and get ready for discovery.", to: "/auth?role=model&intent=become-model" },
+              { src: "/Livestream_host_recruitment_video_20261017005535.mp4", title: "For Live Hosts", text: "Explore creator pathways and live opportunities.", to: "/pathways?intent=bigo" },
+              { src: "/Creator_filming_travel_content_20261017005213.mp4", title: "For Brands & Agencies", text: "Discover talent and shape your next campaign.", to: "/auth?role=brand&intent=book-talent" },
             ].map((item) => (
               <Link key={item.title} to={item.to} className="group relative isolate min-h-64 overflow-hidden rounded-2xl border border-white/15 bg-black/50 text-left shadow-xl transition duration-300 hover:-translate-y-1 hover:border-gold/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                 <video autoPlay muted loop playsInline preload="metadata" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105">
@@ -163,7 +163,7 @@ const Index = () => {
       {/* How it works */}
       <section id="how" className="container py-24">
         <div className="text-center mb-16">
-          <div className="text-xs uppercase tracking-[0.3em] text-gold mb-3">The Workflow</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-gold mb-3">A clearer way to connect</div>
           <h2 className="font-display text-4xl md:text-5xl">
             Profile → Discovery → Match → Booking request → Agreed terms
           </h2>
@@ -227,8 +227,8 @@ const Index = () => {
             },
             {
               icon: MapPin,
-              title: "Built for Nigeria",
-              desc: "Lagos to Abuja to Port Harcourt — local talent, local payment, local rates.",
+              title: "Africa-rooted. Globally minded.",
+              desc: "Bring distinctive African creativity to a wider network of brands, campaigns and audiences.",
             },
           ].map((f) => (
             <div key={f.title} className="glass rounded-2xl p-7">
@@ -258,7 +258,7 @@ const Index = () => {
 
       <footer className="border-t border-gold/10 py-8">
         <div className="container text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Elite NG Modeling OS. Built in Lagos.
+          © {new Date().getFullYear()} Elite NG. Africa-rooted, globally minded.
         </div>
       </footer>
     </div>
