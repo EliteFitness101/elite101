@@ -4,7 +4,7 @@ returns text language plpgsql security definer set search_path = '' as $$
 declare v_secret text;
 begin
   if p_name not in (
-    'GEMINI_API_KEY','GEMINI_AUTOMATION_API_KEY','GEMINI_API_KEY1',
+    'GEMINI_API_KEY','GEMINI_API_KEY1',
     'R2_WRITE_TOKEN',
     'FIRECRAWL_API_KEY','OPENAI_API_KEY','OPENAI_MODEL','GEMINI_MODEL',
     'WHATSAPP_ACCESS_TOKEN','WHATSAPP_PHONE_NUMBER_ID','WHATSAPP_WELCOME_TEMPLATE_NAME','WHATSAPP_TEMPLATE_LANGUAGE',
