@@ -17,6 +17,30 @@ async function request(path, init = {}) {
   return body ? JSON.parse(body) : null;
 }
 
+const queuedJobs = await request("/rest/v1/elite_media_generation_jobs?status=eq.queued&job_type=eq.video_render&select=id,user_id,input&order=created_at.asc&limit=20");
+const startable = (queuedJobs || []).filter(job => job.user_id && job.input?.start_automatically === true).slice(0, 3);
+console.log(`Gemini Omni start queue: ${startable.length} eligible job(s)`);
+for (const job of startable) {
+  try {
+    const response = await fetch(`${base}/functions/v1/elite-media-render-worker`, {
+      method: "POST",
+      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ action: "start", job_id: job.id, user_id: job.user_id }),
+      signal: AbortSignal.timeout(90000),
+    });
+    const body = await response.text();
+    let result = null;
+    try { result = JSON.parse(body); } catch {}
+    if (!response.ok) {
+      console.error(JSON.stringify({ job_id: job.id, start_status: response.status, error: result?.error || body.slice(0, 300) }));
+      continue;
+    }
+    console.log(JSON.stringify({ job_id: job.id, start: result?.status || "submitted", interaction_submitted: result?.interaction_submitted || false }));
+  } catch (error) {
+    console.error(JSON.stringify({ job_id: job.id, start_error: String(error).slice(0, 300) }));
+  }
+}
+
 const jobs = await request("/rest/v1/elite_media_generation_jobs?status=eq.rendering&job_type=eq.video_render&select=id,user_id,output&order=created_at.asc&limit=30");
 const pending = (jobs || []).filter(job =>
   job.user_id &&
