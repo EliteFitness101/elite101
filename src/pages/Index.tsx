@@ -24,10 +24,25 @@ const HeroVideoReel = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(33);
+  const [motionAllowed, setMotionAllowed] = useState(false);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const smallScreen = window.matchMedia("(max-width: 767px)");
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const updatePlaybackPreference = () => setMotionAllowed(!reducedMotion.matches && !smallScreen.matches && !connection?.saveData);
+    updatePlaybackPreference();
+    reducedMotion.addEventListener("change", updatePlaybackPreference);
+    smallScreen.addEventListener("change", updatePlaybackPreference);
+    return () => {
+      reducedMotion.removeEventListener("change", updatePlaybackPreference);
+      smallScreen.removeEventListener("change", updatePlaybackPreference);
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !motionAllowed) return;
     video.volume = volume / 100;
     video.muted = muted;
     if (!isPlaying) {
@@ -36,7 +51,7 @@ const HeroVideoReel = () => {
     }
     const playback = video.play();
     if (playback) playback.catch(() => setIsPlaying(false));
-  }, [activeClip, isPlaying, muted, volume]);
+  }, [activeClip, isPlaying, muted, volume, motionAllowed]);
 
   const moveClip = (direction: number) => {
     setActiveClip((current) => (current + direction + heroClips.length) % heroClips.length);
@@ -44,8 +59,8 @@ const HeroVideoReel = () => {
   };
 
   return (
-    <div className="absolute inset-0" aria-label="Elite creator video reel">
-      <video
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_20%,rgba(212,175,55,0.20),transparent_55%),linear-gradient(145deg,#08080b,#15130d_55%,#08080b)]" aria-label="Elite creator video reel">
+      {motionAllowed && <video
         key={heroClips[activeClip].src}
         ref={videoRef}
         autoPlay
@@ -58,12 +73,12 @@ const HeroVideoReel = () => {
         aria-label={heroClips[activeClip].title}
       >
         <source src={heroClips[activeClip].src} type="video/mp4" />
-      </video>
-      <div className="absolute inset-0 bg-background/55" />
+      </video>}
+      <div className="absolute inset-0 bg-background/45" />
       <div className="absolute top-20 left-1/4 h-96 w-96 rounded-full bg-gold/20 blur-[120px] animate-pulse-glow pointer-events-none" />
       <div className="absolute bottom-10 right-1/4 h-96 w-96 rounded-full bg-neon/10 blur-[120px] pointer-events-none" />
 
-      <div className="absolute bottom-3 left-1/2 z-20 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-2 text-white shadow-xl backdrop-blur-xl">
+      {motionAllowed && <div className="absolute bottom-3 left-1/2 z-20 flex max-w-[calc(100%-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-2 text-white shadow-xl backdrop-blur-xl">
         <span className="hidden sm:block max-w-32 truncate text-xs text-white/80" aria-live="polite">
           {activeClip + 1}/{heroClips.length} · {heroClips[activeClip].title}
         </span>
@@ -84,7 +99,7 @@ const HeroVideoReel = () => {
           <input aria-label="Video volume" type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} className="w-12 sm:w-16 accent-amber-300" />
           <span className="w-7 tabular-nums">{volume}%</span>
         </label>
-      </div>
+      </div>}
     </div>
   );
 };
@@ -144,9 +159,7 @@ const Index = () => {
               { src: "/Creator_filming_travel_content_20261017005213.mp4", title: "For Brands & Agencies", text: "Discover talent and shape your next campaign.", to: "/auth?role=brand&intent=book-talent" },
             ].map((item) => (
               <Link key={item.title} to={item.to} className="group relative isolate min-h-64 overflow-hidden rounded-2xl border border-white/15 bg-black/50 text-left shadow-xl transition duration-300 hover:-translate-y-1 hover:border-gold/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
-                <video autoPlay muted loop playsInline preload="metadata" aria-hidden="true" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105">
-                  <source src={item.src} type="video/mp4" />
-                </video>
+                <div aria-hidden="true" className="absolute inset-0 -z-20 bg-[radial-gradient(ellipse_at_75%_20%,rgba(0,255,153,0.12),transparent_45%),linear-gradient(145deg,rgba(212,175,55,0.18),#08080b_65%)] transition duration-500 group-hover:scale-105" />
                 <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black via-black/55 to-black/5" />
                 <div className="flex min-h-64 flex-col justify-end p-5 sm:p-6">
                   <div className="mb-2 text-xs uppercase tracking-[.2em] text-gold">Explore Elite</div>
