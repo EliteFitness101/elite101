@@ -132,7 +132,7 @@ async function uploadSourceToGemini(rawUrl: string, apiKey: string, jobId: strin
   return { name, uri, mime_type: String(file?.mimeType || file?.mime_type || mimeType), bytes: size, state: String(file?.state || "PROCESSING") };
 }
 async function getGeminiSourceFile(fileName: string, apiKey: string) {
-  const fileId = String(fileName || "").match(/(?:^|\\/)files\\/([^/?#:]+)/)?.[1] || String(fileName || "").split("/").pop() || "";
+  const fileId = String(fileName || "").split("/").pop() || "";
   if (!fileId) throw new Error("gemini_source_file_name_invalid");
   const response = await fetch(GEMINI_API + "/files/" + encodeURIComponent(fileId), {
     headers: { "x-goog-api-key": apiKey }, signal: AbortSignal.timeout(20000),
