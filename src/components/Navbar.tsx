@@ -17,6 +17,7 @@ export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
 
   const openDashboard = async () => {
     if (!user) return navigate("/auth");
+    if (variant === "elite-media") return navigate("/dashboard/elite-media");
     const { data } = await supabase.from("elite_media_requests")
       .select("status,subscription_status,trial_starts_at,trial_ends_at")
       .eq("user_id", user.id)
@@ -76,7 +77,7 @@ export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
               <Button
                 size="sm"
                 className="bg-gold text-primary-foreground hover:opacity-90 glow-gold"
-                onClick={() => navigate("/auth?role=model")}
+                onClick={() => navigate(variant === "elite-media" ? "/questionnaire" : "/auth?role=model")}
               >
                 Get started
               </Button>
