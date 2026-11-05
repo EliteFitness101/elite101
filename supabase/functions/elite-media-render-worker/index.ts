@@ -172,9 +172,25 @@ Deno.serve(async (req: Request) => {
       const state = await poll.json().catch(() => null);
       if (!poll.ok) return reply({ ok: false, error: "video_provider_poll_failed", provider_status: poll.status }, 502);
       if (state?.status === "failed") {
-        output.provider_error = String(state?.error?.message || state?.error || "video_generation_failed").slice(0, 240);
+        const providerFailure = {
+          status: state?.status || null,
+          error: state?.error ?? null,
+          error_message: state?.error_message ?? null,
+          finish_reason: state?.finish_reason ?? null,
+          steps: (Array.isArray(state?.steps) ? state.steps : []).map((step: any) => ({
+            type: step?.type ?? null,
+            status: step?.status ?? null,
+            error: step?.error ?? step?.error_message ?? null,
+            content_types: Array.isArray(step?.content) ? step.content.map((item: any) => item?.type || "unknown") : [],
+          })),
+          response_keys: Object.keys(state || {}).slice(0, 40),
+        };
+        output.provider_error = String(state?.error?.message || state?.error || state?.error_message || "video_generation_failed").slice(0, 1000);
+        output.provider_failure = providerFailure;
+        output.provider_status = "failed";
+        console.error("Gemini Omni generation failed", JSON.stringify(providerFailure).slice(0, 3000));
         await admin.from("elite_media_generation_jobs").update({ status: "failed", output, updated_at: new Date().toISOString() }).eq("id", job.id);
-        return reply({ ok: false, error: "video_generation_failed" }, 502);
+        return reply({ ok: false, error: "video_generation_failed", provider_failure: providerFailure }, 502);
       }
       if (state?.status !== "completed") return reply({ ok: true, job_id: job.id, status: "rendering", completed: false }, 202);
       const videoBlock = output.provider_video_uri ? { uri: output.provider_video_uri } :
