@@ -19,7 +19,14 @@ type ManifestItem = {
   external_product_id?: string;
   price_visibility?: string;
   source_category_url?: string;
-  inventory_freshness_required?: boolean;
+  source_product_url?: string;
+  source_page_verified?: boolean;
+  external_checkout_enabled?: boolean;
+  resale_authorized?: boolean;
+  fulfillment_ready?: boolean;
+  status_label?: string;
+  block_reason?: string;
+  description?: string;
   [key: string]: unknown;
 };
 
@@ -62,6 +69,16 @@ async function catalogGet<T>(path: string): Promise<T> {
 const formatNgn = (value: number) => new Intl.NumberFormat("en-NG", {
   style: "currency", currency: "NGN", maximumFractionDigits: 0,
 }).format(value);
+
+function safeHttpsUrl(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "";
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
 
 export default function ShopCollection() {
   const { slug = "" } = useParams();
@@ -224,14 +241,37 @@ export default function ShopCollection() {
                   );
                 }
                 if (item.kind === "external_candidate") {
+                  const supplierPageUrl = safeHttpsUrl(item.source_product_url || item.href);
+                  const canViewSupplier = item.source_page_verified === true && Boolean(supplierPageUrl);
+                  const canExternalCheckout = canViewSupplier
+                    && item.external_checkout_enabled === true
+                    && item.resale_authorized === true
+                    && item.fulfillment_ready === true
+                    && item.purchase_enabled === true;
+                  const supplierState = typeof item.status_label === "string" && item.status_label.trim()
+                    ? item.status_label
+                    : canExternalCheckout ? "Supplier checkout verified" : "Supplier review pending";
+                  const supplierDetail = typeof item.block_reason === "string" && item.block_reason.trim()
+                    ? item.block_reason
+                    : "Offer status, source-page evidence and fulfilment readiness are resolved from the canonical supplier registry.";
                   return (
                     <article key={item.external_product_id || index} className="elite-glass rounded-3xl p-6">
                       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/45">
-                        <LockKeyhole className="h-4 w-4" /> Supplier verification pending
+                        <LockKeyhole className="h-4 w-4" /> {supplierState}
                       </div>
-                      <h2 className="mt-4 text-xl font-semibold">{item.title || "External supplier candidate"}</h2>
-                      <p className="mt-2 text-sm leading-6 text-white/55">Direct product page, seller, current price, stock, resale permission and delivery terms are not verified. This item is not purchasable.</p>
-                      <span className="mt-5 inline-flex rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/45">Not available for checkout</span>
+                      <h2 className="mt-4 text-xl font-semibold">{item.title || "External supplier offer"}</h2>
+                      <p className="mt-2 text-sm leading-6 text-white/55">{String(item.description || supplierDetail)}</p>
+                      {canExternalCheckout ? (
+                        <a href={supplierPageUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-5 inline-flex rounded-full border border-[#e9c979]/40 px-4 py-2 text-sm text-[#f4d58b] hover:bg-white/5">
+                          Continue to supplier checkout <ArrowRight className="ml-2 h-4 w-4" />
+                        </a>
+                      ) : canViewSupplier ? (
+                        <a href={supplierPageUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-5 inline-flex rounded-full border border-white/10 px-4 py-2 text-sm text-white/65 hover:bg-white/5">
+                          View verified supplier page <ArrowRight className="ml-2 h-4 w-4" />
+                        </a>
+                      ) : (
+                        <span className="mt-5 inline-flex rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/45">{supplierState}</span>
+                      )}
                     </article>
                   );
                 }
@@ -292,7 +332,7 @@ export default function ShopCollection() {
                   <Button type="submit" disabled={checkoutBusy} className="rounded-full bg-[#e9c979] text-[#15130e] hover:bg-[#f3d992] sm:col-span-2">
                     {checkoutBusy ? "Preparing secure checkout…" : "Continue to Paystack"} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <p className="text-xs leading-5 text-white/40 sm:col-span-2">ResoFit Paystack checkout revalidates every SKU, price and fulfillment rule on the server. Jumia candidates and Elite101 service offers are not included in this cart.</p>
+                  <p className="text-xs leading-5 text-white/40 sm:col-span-2">ResoFit Paystack checkout revalidates every first-party SKU, price and fulfilment rule on the server. External supplier offers and Elite101 services use their own verified source or service checkout contracts.</p>
                 </form>
               </section>
             )}
