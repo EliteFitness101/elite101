@@ -299,6 +299,7 @@ Deno.serve(async (req: Request) => {
             if (job.input?.source_upload_only === true) {
               output.source_upload_smoke_verified = true;
               output.source_upload_smoke_at = new Date().toISOString();
+              output.secondary_provider_key_available = Boolean(secondaryKey);
               await admin.from("elite_media_generation_jobs").update({ status: "ready", output, updated_at: new Date().toISOString() }).eq("id", job.id);
               return reply({ ok: true, job_id: job.id, status: "ready", source_upload_verified: true, provider_file_uri_persisted: !!output.provider_source_file_uri, source_bytes: output.provider_source_bytes, provider_key_slot: candidate.slot, secondary_provider_key_available: Boolean(secondaryKey) }, 200);
             }
