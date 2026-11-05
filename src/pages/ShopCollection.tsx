@@ -12,6 +12,7 @@ type ManifestItem = {
   title?: string;
   status?: string;
   purchase_enabled?: boolean;
+  inventory_freshness_required?: boolean;
   fulfillment_mode?: string;
   service_slug?: string;
   href?: string;
