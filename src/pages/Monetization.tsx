@@ -7,7 +7,7 @@ import {
   ArrowDownRight, ArrowRight, Check, ChevronDown, Clapperboard, Crown, Film,
   Layers3, ShieldCheck, Sparkles, Users, WandSparkles,
 } from "lucide-react";
-import { Navbar } from "@/components/Navbar";
+import { Navbar } from "@/components/Navbar";\nimport EliteMediaShowcaseVideo from "@/components/EliteMediaShowcaseVideo";
 import { Button } from "@/components/ui/button";
 
 type Offer = {
@@ -27,7 +27,7 @@ type Offer = {
 
 const offers: Offer[] = [
   {
-    slug: "highlight-launch-pack",
+    slug: "highlight-launch-pack",\n    video: "/Creating_advertisement_for_creators_20261017004820.mp4",
     name: "Highlight Launch Pack",
     eyebrow: "One-time production",
     price: 49,
@@ -40,7 +40,7 @@ const offers: Offer[] = [
     cta: "Start a launch pack",
   },
   {
-    slug: "creator-starter",
+    slug: "creator-starter",\n    video: "/Creator_applying_for_streaming_role_20261017010020.mp4",
     name: "Starter",
     eyebrow: "Creator workspace",
     price: 9,
@@ -53,7 +53,7 @@ const offers: Offer[] = [
     cta: "Choose Starter",
   },
   {
-    slug: "creator-pro",
+    slug: "creator-pro",\n    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
     name: "Pro",
     eyebrow: "For frequent publishers",
     price: 19,
@@ -67,7 +67,7 @@ const offers: Offer[] = [
     popular: true,
   },
   {
-    slug: "agency-workspace",
+    slug: "agency-workspace",\n    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
     name: "Agency Workspace",
     eyebrow: "Multi-creator operations",
     price: 99,
@@ -80,7 +80,7 @@ const offers: Offer[] = [
     cta: "Discuss an agency pilot",
   },
   {
-    slug: "agency-production-retainer",
+    slug: "agency-production-retainer",\n    video: "/Livestream_host_recruitment_video_20261017005535.mp4",
     name: "Agency Production",
     eyebrow: "Managed service",
     price: 300,
@@ -95,8 +95,8 @@ const offers: Offer[] = [
 ];
 
 const faqs = [
-  { q: "Are these prices final?", a: "These are launch-test prices. The exact clip count, delivery window, storage allowance, revision policy, applicable taxes, and any local-currency amount must be confirmed on the order before payment." },
-  { q: "Do you automatically capture and publish my livestreams?", a: "Only integrations explicitly shown as available in your account should be treated as automated. Early production packages can use media you provide or explicitly authorize, with manual review and delivery where needed." },
+  { q: "Are these prices final?", a: "The listed USD amounts are the current displayed plan prices. Your secure order review confirms the charge currency, exact amount, and applicable taxes before you authorize payment. For managed production, clip volume, delivery window, storage, and revision allowance are confirmed in your proposal." },
+  { q: "Do you automatically capture and publish my livestreams?", a: "Connected and verified integrations can automate supported capture, processing, and publishing steps. If an integration is not active in your account, you can still submit authorized media for production with review and delivery. Your workspace should show which connections are available." },
   { q: "Can I use Elite Ng from Nigeria and internationally?", a: "The offer is designed for Nigerian and international creators. Checkout currency, payment methods, settlement eligibility, and taxes are confirmed by the enabled payment provider at checkout." },
   { q: "Can I cancel a subscription?", a: "Monthly plans renew automatically. Open Manage subscription in the footer, enter the checkout email and payment reference, then review or cancel through Paystack’s secure management page. Cancellation stops future renewals; any already-paid period remains subject to the provider’s subscription status." },
   { q: "What content can I submit?", a: "Submit only media you own or are authorized to process. You remain responsible for the necessary creator, platform, music, and third-party permissions." },
@@ -120,6 +120,7 @@ function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstim
   const requestOnly = ["agency-workspace", "agency-production-retainer"].includes(offer.slug);
   return (
     <article className={`elite-offer-card relative flex h-full flex-col rounded-[1.7rem] p-6 md:p-7 ${offer.popular ? "elite-offer-featured" : ""}`}>
+      <EliteMediaShowcaseVideo src={offer.video} title={`${offer.name} preview`} className="mb-5 aspect-video w-full rounded-2xl border border-white/10" />
       {offer.popular && <span className="elite-pill absolute right-5 top-5"><Sparkles className="h-3 w-3" /> MOST POPULAR</span>}
       <p className="elite-kicker mb-3">{offer.eyebrow}</p>
       <h3 className="pr-2 text-2xl font-semibold tracking-tight">{offer.name}</h3>
@@ -158,7 +159,7 @@ function PricingPage() {
   }, []);
   return (
     <main className="elite-page min-h-screen overflow-hidden text-white">
-      <Navbar />
+      <Navbar variant="elite-media" brandTo="/monetization" />
       <div className="elite-atmosphere" aria-hidden="true"><span /><span /><span /></div>
       <header className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 md:pb-24 md:pt-24">
         <div className="mx-auto max-w-4xl text-center">
@@ -275,7 +276,7 @@ function PricingPage() {
       </motion.section>
 
       <footer className="relative z-10 border-t border-white/10 px-4 py-10 text-center">
-        <div className="mx-auto max-w-5xl"><div className="elite-wordmark">ELITE<span> NG</span></div><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/45">Creator growth. Premium media. Better systems.</p><div className="mt-6 flex flex-wrap justify-center gap-5 text-xs text-white/45"><a href="#offers" className="hover:text-white">Offers</a><Link to="/pathways" className="hover:text-white">Creator pathways</Link><Link to="/questionnaire" className="hover:text-white">Get started</Link><Link to="/auth" className="hover:text-white">Sign in</Link><Link to="/manage-subscription" className="hover:text-white">Manage subscription</Link></div><p className="mt-8 text-[11px] text-white/30">Prices are proposed launch-test prices. Final scope, currency, tax, payment methods, and terms are confirmed before purchase.</p></div>
+        <div className="mx-auto max-w-5xl"><div className="elite-wordmark">ELITE<span> NG</span></div><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/45">Creator growth. Premium media. Better systems.</p><div className="mt-6 flex flex-wrap justify-center gap-5 text-xs text-white/45"><a href="#offers" className="hover:text-white">Offers</a><Link to="/pathways" className="hover:text-white">Creator pathways</Link><Link to="/questionnaire" className="hover:text-white">Get started</Link><Link to="/auth" className="hover:text-white">Sign in</Link><Link to="/manage-subscription" className="hover:text-white">Manage subscription</Link></div><p className="mt-8 text-[11px] text-white/30">Your secure order review confirms the amount, currency, scope, and applicable taxes before payment is authorized.</p></div>
       </footer>
       <style>{eliteStyles}</style>
     </main>
