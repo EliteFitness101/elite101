@@ -1,5 +1,7 @@
 const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const secondaryGeminiKey = process.env.GEMINI_AUTOMATION_API_KEY || "";
+console.log("Secondary Gemini automation key configured:", Boolean(secondaryGeminiKey));
 if (!base || !key) throw new Error("Missing Supabase runner credentials");
 
 async function request(path, init = {}) {
@@ -17,14 +19,21 @@ async function request(path, init = {}) {
   return body ? JSON.parse(body) : null;
 }
 
-const queuedJobs = await request("/rest/v1/elite_media_generation_jobs?status=eq.queued&job_type=eq.video_render&select=id,user_id,input&order=created_at.asc&limit=20");
-const startable = (queuedJobs || []).filter(job => job.user_id && job.input?.start_automatically === true).slice(0, 3);
+const queuedJobs = await request("/rest/v1/elite_media_generation_jobs?status=eq.queued&job_type=eq.video_render&select=id,user_id,input,output&order=created_at.asc&limit=30");
+const now = Date.now();
+const startable = (queuedJobs || []).filter(job => {
+  const retryAt = Date.parse(job.output?.next_retry_at || "");
+  const due = !job.output?.next_retry_at || Number.isNaN(retryAt) || retryAt <= now;
+  const attempts = Number(job.output?.provider_attempts || 0);
+  return job.user_id && job.input?.start_automatically === true && due && attempts < 3;
+}).slice(0, 3);
+const automationHeader = secondaryGeminiKey ? { "x-gemini-automation-key": secondaryGeminiKey } : {};
 console.log(`Gemini Omni start queue: ${startable.length} eligible job(s)`);
 for (const job of startable) {
   try {
     const response = await fetch(`${base}/functions/v1/elite-media-render-worker`, {
       method: "POST",
-      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
+      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", ...automationHeader },
       body: JSON.stringify({ action: "start", job_id: job.id, user_id: job.user_id }),
       signal: AbortSignal.timeout(90000),
     });
@@ -57,6 +66,7 @@ for (const job of pending) {
         apikey: key,
         authorization: `Bearer ${key}`,
         "content-type": "application/json",
+        ...automationHeader,
       },
       body: JSON.stringify({ action: "poll", job_id: job.id, user_id: job.user_id }),
       signal: AbortSignal.timeout(90000),
