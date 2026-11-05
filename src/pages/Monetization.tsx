@@ -227,7 +227,7 @@ function PricingPage() {
           {offers.filter((offer) => ["creator-starter", "creator-pro", "agency-workspace"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} mediaAssets={mediaAssets} />)}
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          {offers.filter((offer) => ["highlight-launch-pack", "agency-production-retainer"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} />)}
+          {offers.filter((offer) => ["highlight-launch-pack", "agency-production-retainer"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} mediaAssets={mediaAssets} />)}
         </div>
       </motion.section>
 
