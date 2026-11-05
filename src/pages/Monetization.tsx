@@ -31,7 +31,7 @@ type Offer = {
 const offers: Offer[] = [
   {
     slug: "highlight-launch-pack",
-    video: "/Creating_advertisement_for_creators_20261017004820.mp4",
+    video: "/Creating_advertisement_for_creat%E2%80%A6_20261017004820.mp4",
     name: "Highlight Launch Pack",
     eyebrow: "One-time production",
     price: 49,
@@ -59,7 +59,7 @@ const offers: Offer[] = [
   },
   {
     slug: "creator-pro",
-    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
+    video: "/Creators_preparing_for_professio%E2%80%A6_20261017003431.mp4",
     name: "Pro",
     eyebrow: "For frequent publishers",
     price: 19,
@@ -74,7 +74,7 @@ const offers: Offer[] = [
   },
   {
     slug: "agency-workspace",
-    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
+    video: "/Creators_preparing_for_professio%E2%80%A6_20261017003431.mp4",
     name: "Agency Workspace",
     eyebrow: "Multi-creator operations",
     price: 99,
@@ -172,7 +172,7 @@ function PricingPage() {
       <Navbar variant="elite-media" brandTo="/monetization" />
       <div className="elite-atmosphere" aria-hidden="true"><span /><span /><span /></div>
       <header className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 md:pb-24 md:pt-24">
-        <EliteMediaShowcaseVideo src={mediaAssets.hero_background?.src || "/Creators_preparing_for_professional_content_20261017003431.mp4"} title="Elite creator production showcase" className="absolute inset-0 z-0 min-h-[30rem] rounded-b-[3rem] opacity-35" />
+        <EliteMediaShowcaseVideo src={mediaAssets.hero_background?.src || "/Creators_preparing_for_professio%E2%80%A6_20261017003431.mp4"} title="Elite creator production showcase" className="absolute inset-0 z-0 min-h-[30rem] rounded-b-[3rem] opacity-35" />
         <div className="relative z-20 mx-auto max-w-4xl text-center">
           <span className="elite-pill mb-7"><span className="elite-live-dot" /> THE CREATOR OPERATING SYSTEM</span>
           <p className="elite-kicker mb-5">ELITE MEDIA · CREATOR GROWTH & AUTOMATION</p>
