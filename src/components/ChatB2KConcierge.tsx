@@ -39,8 +39,7 @@ export function ChatB2KConcierge() {
       if (error) throw error;
       if (!data?.ok || typeof data.reply !== "string") throw new Error(data?.error || "Live assistant did not return a reply.");
       setMessages((old) => [...old, { role: "assistant", content: data.reply }]);
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : "Connection unavailable";
+    } catch {
       setMessages((old) => [...old, { role: "assistant", content: "ChatB2K is temporarily unavailable. Your message has not been actioned. Please try again shortly, or use one of the guided options below." }]);
     } finally {
       setBusy(false);
