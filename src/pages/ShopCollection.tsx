@@ -17,6 +17,8 @@ type ManifestItem = {
   service_slug?: string;
   href?: string;
   external_product_id?: string;
+  registry_product_id?: string;
+  registry_project_ref?: string;
   price_visibility?: string;
   source_category_url?: string;
   source_product_url?: string;
@@ -255,7 +257,7 @@ export default function ShopCollection() {
                     ? item.block_reason
                     : "Offer status, source-page evidence and fulfilment readiness are resolved from the canonical supplier registry.";
                   return (
-                    <article key={item.external_product_id || index} className="elite-glass rounded-3xl p-6">
+                    <article key={item.external_product_id || item.registry_product_id || index} className="elite-glass rounded-3xl p-6">
                       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/45">
                         <LockKeyhole className="h-4 w-4" /> {supplierState}
                       </div>
