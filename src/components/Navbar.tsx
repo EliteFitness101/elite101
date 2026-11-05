@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Navbar = () => {
+type NavbarProps = { variant?: "default" | "elite-media"; brandTo?: string };\n\nexport const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
   const { user, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const dashboardPath = roles.includes("admin")
@@ -33,7 +33,7 @@ export const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 glass-strong border-b border-gold/20">
       <div className="container flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-2 group">
+        <Link to={brandTo ?? "/"} className="flex items-center gap-2 group">
           <div className="relative">
             <Sparkles className="h-6 w-6 text-gold" />
             <div className="absolute inset-0 blur-md bg-gold opacity-50 group-hover:opacity-80 transition" />
@@ -42,14 +42,20 @@ export const Navbar = () => {
             ELITE <span className="text-gradient-gold">NG</span>
           </span>
         </Link>
-        <nav className="hidden md:flex items-center gap-4">\n          <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Explore Elite Media</Link>
-          <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">
-            Marketplace
-          </Link>
-          <a href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition">
-            How it works
-          </a>
-        </nav>
+        {variant === "elite-media" ? (
+          <nav aria-label="Elite Media navigation" className="hidden md:flex items-center gap-5">
+            <Link to="/monetization#offers" className="text-sm text-white/70 hover:text-amber-200 transition">Offers</Link>
+            <Link to="/monetization#how-it-works" className="text-sm text-white/70 hover:text-amber-200 transition">Workflow</Link>
+            <Link to="/monetization#faq" className="text-sm text-white/70 hover:text-amber-200 transition">FAQs</Link>
+            <Link to="/questionnaire" className="text-sm text-amber-200 hover:text-white transition">Get started</Link>
+          </nav>
+        ) : (
+          <nav className="hidden md:flex items-center gap-4">
+            <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Explore Elite Media</Link>
+            <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">Marketplace</Link>
+            <a href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition">How it works</a>
+          </nav>
+        )}
         <div className="flex items-center gap-2">
           {user ? (
             <>
@@ -77,7 +83,7 @@ export const Navbar = () => {
         </div>
       </div>
 
-      <div className="border-t border-gold/10">
+      {variant !== "elite-media" && (\n      <div className="border-t border-gold/10">
         <nav aria-label="Quick paths" className="container flex gap-2 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Link to="/pathways?intent=bigo" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Start BIGO Live</Link>
           <Link to="/pathways?intent=start-earning" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Start Earning</Link>
@@ -87,7 +93,7 @@ export const Navbar = () => {
           <Link to="/pathways?intent=soft-loan-enquiry" title="Enquiry only; loan availability and approval are not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Soft Loan Enquiry</Link>
           <a href="https://shop.resofit.fit/" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-neon/30 px-3 py-1.5 text-xs text-neon hover:bg-neon/10">Shop Gadgets ↗</a>
         </nav>
-      </div>
+      </div>\n      )}
     </header>
   );
 };
