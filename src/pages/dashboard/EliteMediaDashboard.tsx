@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import EliteMediaShowcaseVideo from "@/components/EliteMediaShowcaseVideo";
+import { useEliteSiteMediaAssets } from "@/hooks/useEliteSiteMediaAssets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ const statusLabel = (value: string) => value.replaceAll("_", " ");
 const dateLabel = (value: string | null) => value ? new Date(value).toLocaleString() : "Not scheduled";
 
 export default function EliteMediaDashboard() {
+  const mediaAssets = useEliteSiteMediaAssets();
   const { user } = useAuth();
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -249,7 +251,7 @@ export default function EliteMediaDashboard() {
             </div>
           </div>
           <div>
-            <EliteMediaShowcaseVideo src="/Creators_preparing_for_professional_content_20261017003431.mp4" title="Elite creator production in action" className="aspect-video w-full rounded-3xl border border-gold/20 shadow-2xl shadow-black/40" />
+            <EliteMediaShowcaseVideo src={mediaAssets.dashboard_intro?.src || "/Creators_preparing_for_professional_content_20261017003431.mp4"} title="Elite creator production in action" className="aspect-video w-full rounded-3xl border border-gold/20 shadow-2xl shadow-black/40" />
             <p className="mt-2 text-xs text-muted-foreground">Video plays while visible. Tap the speaker to hear audio.</p>
           </div>
         </header>
