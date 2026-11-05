@@ -265,6 +265,33 @@ function PricingPage() {
         </div>
       </motion.section>
 
+      {[
+        { slot: "registration_walkthrough", title: "Create your workspace", description: "A short guide to joining Elite NG and reaching your workspace." },
+        { slot: "plan_comparison", title: "Choose the right plan", description: "Understand the difference between a one-time pack, subscription and managed service." },
+        { slot: "media_generation_walkthrough", title: "Generate and render media", description: "Follow the brief-to-MP4 production journey." },
+        { slot: "publishing_walkthrough", title: "Review and publish", description: "See how approved media moves through connected, verified publishing." },
+        { slot: "hr_assistant_walkthrough", title: "Meet Mavia", description: "See how the HR and concierge assistant can guide the next step." },
+      ].filter((guide) => mediaAssets[guide.slot]?.src).length > 0 && (
+        <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-7xl px-4 py-12 sm:px-6 md:py-16">
+          <div className="mb-8"><p className="elite-kicker mb-3">WATCH THE WORKFLOW</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">See each step before you start.</h2><p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Short, current walkthroughs appear here after they pass media, rights and publishing QA.</p></div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { slot: "registration_walkthrough", title: "Create your workspace", description: "A short guide to joining Elite NG and reaching your workspace." },
+              { slot: "plan_comparison", title: "Choose the right plan", description: "Understand the difference between a one-time pack, subscription and managed service." },
+              { slot: "media_generation_walkthrough", title: "Generate and render media", description: "Follow the brief-to-MP4 production journey." },
+              { slot: "publishing_walkthrough", title: "Review and publish", description: "See how approved media moves through connected, verified publishing." },
+              { slot: "hr_assistant_walkthrough", title: "Meet Mavia", description: "See how the HR and concierge assistant can guide the next step." },
+            ].filter((guide) => mediaAssets[guide.slot]?.src).map((guide) => (
+              <article key={guide.slot} className="elite-glass rounded-2xl p-4">
+                <EliteMediaShowcaseVideo src={mediaAssets[guide.slot].src} title={guide.title} className="aspect-video w-full rounded-xl" />
+                <h3 className="mt-4 font-medium">{guide.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-white/50">{guide.description}</p>
+              </article>
+            ))}
+          </div>
+        </motion.section>
+      )}
+
       <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-5xl px-4 py-14 sm:px-6 md:py-20">
         <div className="elite-glass rounded-[2rem] p-6 sm:p-10 md:p-14">
           <p className="elite-kicker mb-3">BUILT AROUND YOUR WORKFLOW</p><h2 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">Your content deserves more than a folder full of clips.</h2>
