@@ -77,7 +77,9 @@ Deno.serve(async (req: Request) => {
     const tokenParts = token.split(".");
     let tokenRole = "";
     try {
-      const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      const encodedPayload = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const paddedPayload = encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, "=");
+      const payload = JSON.parse(atob(paddedPayload));
       tokenRole = String(payload.role || "");
     } catch { tokenRole = ""; }
     const internalServiceRequest = tokenRole === "service_role" && ["start", "poll"].includes(action);
