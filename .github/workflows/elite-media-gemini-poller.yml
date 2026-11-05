@@ -1,0 +1,34 @@
+name: Elite Media Gemini Omni Poller
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/elite-media-gemini-poller.yml'
+      - 'scripts/elite-media-poll-worker.mjs'
+      - 'supabase/functions/elite-media-render-worker/index.ts'
+  workflow_dispatch:
+  schedule:
+    - cron: "*/2 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elite-media-gemini-poller
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start and poll entitled Gemini Omni jobs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/elite-media-poll-worker.mjs
