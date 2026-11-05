@@ -1,7 +1,7 @@
 const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const secondaryGeminiKey = process.env.GEMINI_AUTOMATION_API_KEY || process.env.GEMINI_API_KEY1 || "";
-console.log("Secondary Gemini provider key configured:", Boolean(secondaryGeminiKey), "source:", process.env.GEMINI_AUTOMATION_API_KEY ? "GEMINI_AUTOMATION_API_KEY" : process.env.GEMINI_API_KEY1 ? "GEMINI_API_KEY1" : "none");
+const secondaryGeminiKey = process.env.GEMINI_API_KEY1 || "";
+console.log("Internal media secondary Gemini key configured:", Boolean(secondaryGeminiKey), "source:", process.env.GEMINI_API_KEY1 ? "GEMINI_API_KEY1" : "none");
 if (!base || !key) throw new Error("Missing Supabase runner credentials");
 
 async function request(path, init = {}) {
@@ -33,13 +33,12 @@ const startable = (queuedJobs || []).filter(job => {
   const attempts = Number(job.output?.provider_attempts || 0);
   return job.user_id && job.input?.start_automatically === true && due && attempts < 3 && (secondaryKeyAvailable || job.input?.source_upload_only === true);
 }).slice(0, 3);
-const automationHeader = secondaryGeminiKey ? { "x-gemini-automation-key": secondaryGeminiKey } : {};
 console.log(`Gemini Omni start queue: ${startable.length} eligible job(s)`);
 for (const job of startable) {
   try {
     const response = await fetch(`${base}/functions/v1/elite-media-render-worker`, {
       method: "POST",
-      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", ...automationHeader },
+      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
       body: JSON.stringify({ action: "start", job_id: job.id, user_id: job.user_id }),
       signal: AbortSignal.timeout(90000),
     });
