@@ -1,7 +1,7 @@
 const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const secondaryGeminiKey = process.env.GEMINI_AUTOMATION_API_KEY || "";
-console.log("Secondary Gemini automation key configured:", Boolean(secondaryGeminiKey));
+const secondaryGeminiKey = process.env.GEMINI_AUTOMATION_API_KEY || process.env.GEMINI_API_KEY1 || "";
+console.log("Secondary Gemini provider key configured:", Boolean(secondaryGeminiKey), "source:", process.env.GEMINI_AUTOMATION_API_KEY ? "GEMINI_AUTOMATION_API_KEY" : process.env.GEMINI_API_KEY1 ? "GEMINI_API_KEY1" : "none");
 if (!base || !key) throw new Error("Missing Supabase runner credentials");
 
 async function request(path, init = {}) {
@@ -44,7 +44,7 @@ for (const job of startable) {
       console.error(JSON.stringify({ job_id: job.id, start_status: response.status, error: result?.error || body.slice(0, 300) }));
       continue;
     }
-    console.log(JSON.stringify({ job_id: job.id, start: result?.status || "submitted", interaction_submitted: result?.interaction_submitted || false }));
+    console.log(JSON.stringify({ job_id: job.id, start: result?.status || "submitted", interaction_submitted: result?.interaction_submitted || false, provider_key_slot: result?.provider_key_slot || "primary" }));
   } catch (error) {
     console.error(JSON.stringify({ job_id: job.id, start_error: String(error).slice(0, 300) }));
   }
