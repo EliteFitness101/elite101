@@ -251,7 +251,7 @@ export default function EliteMediaDashboard() {
             </div>
           </div>
           <div>
-            <EliteMediaShowcaseVideo src={mediaAssets.dashboard_intro?.src || "/Creators_preparing_for_professional_content_20261017003431.mp4"} title="Elite creator production in action" className="aspect-video w-full rounded-3xl border border-gold/20 shadow-2xl shadow-black/40" />
+            <EliteMediaShowcaseVideo src={mediaAssets.dashboard_intro?.src || "/Creators_preparing_for_professio%E2%80%A6_20261017003431.mp4"} title="Elite creator production in action" className="aspect-video w-full rounded-3xl border border-gold/20 shadow-2xl shadow-black/40" />
             <p className="mt-2 text-xs text-muted-foreground">Video plays while visible. Tap the speaker to hear audio.</p>
           </div>
         </header>
