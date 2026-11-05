@@ -4,7 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-type NavbarProps = { variant?: "default" | "elite-media"; brandTo?: string };\n\nexport const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
+type NavbarProps = { variant?: "default" | "elite-media"; brandTo?: string };
+
+export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
   const { user, roles, signOut } = useAuth();
   const navigate = useNavigate();
   const dashboardPath = roles.includes("admin")
@@ -83,7 +85,8 @@ type NavbarProps = { variant?: "default" | "elite-media"; brandTo?: string };\n\
         </div>
       </div>
 
-      {variant !== "elite-media" && (\n      <div className="border-t border-gold/10">
+      {variant !== "elite-media" && (
+      <div className="border-t border-gold/10">
         <nav aria-label="Quick paths" className="container flex gap-2 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Link to="/pathways?intent=bigo" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Start BIGO Live</Link>
           <Link to="/pathways?intent=start-earning" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Start Earning</Link>
@@ -93,7 +96,8 @@ type NavbarProps = { variant?: "default" | "elite-media"; brandTo?: string };\n\
           <Link to="/pathways?intent=soft-loan-enquiry" title="Enquiry only; loan availability and approval are not guaranteed" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Soft Loan Enquiry</Link>
           <a href="https://shop.resofit.fit/" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-neon/30 px-3 py-1.5 text-xs text-neon hover:bg-neon/10">Shop Gadgets ↗</a>
         </nav>
-      </div>\n      )}
+      </div>
+      )}
     </header>
   );
 };
