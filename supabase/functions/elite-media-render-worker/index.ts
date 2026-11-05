@@ -9,7 +9,7 @@ const VIDEO_MODEL = "gemini-omni-1.1-flash";
 const BUCKET = "resofit-paid-deliverables";
 const cors = {
   "Access-Control-Allow-Origin": "https://elite.resofit.fit",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-gemini-automation-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json",
   "Cache-Control": "no-store",
@@ -20,6 +20,127 @@ async function geminiKey() {
   const { data, error } = await admin.rpc("get_digital_product_factory_gemini_key");
   if (error || !data) throw new Error("gemini_api_key_missing");
   return String(data);
+}
+
+
+const MAX_SOURCE_BYTES = 250 * 1024 * 1024;
+const ALLOWED_SOURCE_MIMES = ["video/mp4", "video/webm", "video/quicktime", "video/mpeg", "video/3gpp", "video/x-flv", "video/x-ms-wmv"];
+function isAllowedSourceUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    const h = u.hostname.toLowerCase();
+    const ok = h === "media.resofit.fit" || h === "content.resofit.fit" ||
+      h === "vbqjvmnhdtdhmeeudqnn.supabase.co" || h.endsWith(".public.blob.vercel-storage.com") ||
+      h === "www.dropbox.com" || h === "dl.dropboxusercontent.com" ||
+      h === "drive.google.com" || h === "drive.usercontent.google.com" || h.endsWith(".googleusercontent.com");
+    return u.protocol === "https:" && !u.username && !u.password && ok;
+  } catch { return false; }
+}
+function retryableProviderFailure(status: number, payload: any) {
+  const details = JSON.stringify(payload || {}).toUpperCase();
+  return [408,409,425,429,500,502,503,504].includes(status) ||
+    details.includes("RESOURCE_EXHAUSTED") || details.includes("UNAVAILABLE") ||
+    details.includes("RATE_LIMIT") || details.includes("QUOTA");
+}
+async function fetchAllowedSource(raw: string) {
+  let current = new URL(raw);
+  for (let attempt = 0; attempt < 6; attempt++) {
+    if (!isAllowedSourceUrl(current.toString())) throw new Error("source_media_host_not_allowed");
+    const response = await fetch(current.toString(), { redirect: "manual", signal: AbortSignal.timeout(45000) });
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      await response.body?.cancel();
+      if (!location) throw new Error("source_media_redirect_location_missing");
+      current = new URL(location, current);
+      continue;
+    }
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error("source_media_fetch_http_" + response.status);
+    }
+    if (!isAllowedSourceUrl(response.url || current.toString())) {
+      await response.body?.cancel();
+      throw new Error("source_media_redirect_host_not_allowed");
+    }
+    return response;
+  }
+  throw new Error("source_media_redirect_limit_exceeded");
+}
+async function uploadSourceToGemini(rawUrl: string, apiKey: string, jobId: string) {
+  if (!isAllowedSourceUrl(rawUrl)) throw new Error("source_media_host_not_allowed");
+  const source = await fetchAllowedSource(rawUrl);
+  const size = Number(source.headers.get("content-length") || 0);
+  if (!Number.isFinite(size) || size < 1024) {
+    await source.body?.cancel();
+    throw new Error("source_media_content_length_required");
+  }
+  if (size > MAX_SOURCE_BYTES) {
+    await source.body?.cancel();
+    throw new Error("source_media_exceeds_250_mib_gemini_upload_limit");
+  }
+  let mimeType = String(source.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  if (!ALLOWED_SOURCE_MIMES.includes(mimeType)) {
+    const path = new URL(rawUrl).pathname.toLowerCase();
+    mimeType = path.endsWith(".mp4") ? "video/mp4" : path.endsWith(".webm") ? "video/webm" : path.endsWith(".mov") ? "video/quicktime" : "";
+  }
+  if (!ALLOWED_SOURCE_MIMES.includes(mimeType)) {
+    await source.body?.cancel();
+    throw new Error("source_media_mime_type_unsupported");
+  }
+  const init = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "X-Goog-Upload-Protocol": "resumable",
+      "X-Goog-Upload-Command": "start",
+      "X-Goog-Upload-Header-Content-Length": String(size),
+      "X-Goog-Upload-Header-Content-Type": mimeType,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ file: { display_name: "elite-" + jobId + "-source" } }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!init.ok) {
+    await source.body?.cancel();
+    const failure = await init.json().catch(() => null);
+    throw new Error("gemini_source_upload_init_" + init.status + "_" + String(failure?.error?.status || failure?.error?.message || "failed").slice(0,120));
+  }
+  const uploadUrl = init.headers.get("x-goog-upload-url");
+  if (!uploadUrl) {
+    await source.body?.cancel();
+    throw new Error("gemini_source_upload_url_missing");
+  }
+  const uploadInit: any = {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": apiKey,
+      "X-Goog-Upload-Offset": "0",
+      "X-Goog-Upload-Command": "upload, finalize",
+      "Content-Type": mimeType,
+    },
+    body: source.body,
+    signal: AbortSignal.timeout(120000),
+    duplex: "half",
+  };
+  const uploaded = await fetch(uploadUrl, uploadInit);
+  const payload = await uploaded.json().catch(() => null);
+  if (!uploaded.ok) throw new Error("gemini_source_upload_finalize_" + uploaded.status + "_" + String(payload?.error?.status || payload?.error?.message || "failed").slice(0,120));
+  const file = payload?.file || payload;
+  const name = String(file?.name || "");
+  const uri = String(file?.uri || "");
+  if (!name || !uri) throw new Error("gemini_source_file_reference_missing");
+  return { name, uri, mime_type: String(file?.mimeType || file?.mime_type || mimeType), bytes: size, state: String(file?.state || "PROCESSING") };
+}
+async function getGeminiSourceFile(fileName: string, apiKey: string) {
+  const fileId = String(fileName || "").match(/(?:^|\\/)files\\/([^/?#:]+)/)?.[1] || String(fileName || "").split("/").pop() || "";
+  if (!fileId) throw new Error("gemini_source_file_name_invalid");
+  const response = await fetch(GEMINI_API + "/files/" + encodeURIComponent(fileId), {
+    headers: { "x-goog-api-key": apiKey }, signal: AbortSignal.timeout(20000),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error("gemini_source_file_status_" + response.status);
+  return { name: String(payload?.name || fileName), uri: String(payload?.uri || ""),
+    mime_type: String(payload?.mimeType || payload?.mime_type || "video/mp4"), state: String(payload?.state || "PROCESSING") };
 }
 
 async function getOwnedJob(jobId: string, userId: string) {
@@ -107,7 +228,12 @@ Deno.serve(async (req: Request) => {
       return reply({ ok: true, job_id: job.id, status: job.status, output_url: job.output_url, output });
     }
 
-    const key = await geminiKey();
+    const primaryKey = ["start", "poll"].includes(action) ? await geminiKey() : "";
+    const secondaryKey = internalServiceRequest
+      ? String(req.headers.get("x-gemini-automation-key") || Deno.env.get("GEMINI_AUTOMATION_API_KEY") || "").trim()
+      : String(Deno.env.get("GEMINI_AUTOMATION_API_KEY") || "").trim();
+    const pollKey = output.provider_key_slot === "automation_secondary" ? secondaryKey : primaryKey;
+    if (["start", "poll"].includes(action) && !pollKey && !secondaryKey) return reply({ ok: false, error: "gemini_api_key_missing" }, 503);
     if (action === "start") {
       await ensureBucket();
       if (output.provider_interaction_id && job.status === "rendering") return reply({ ok: true, job_id: job.id, status: job.status, interaction_submitted: true });
@@ -115,45 +241,113 @@ Deno.serve(async (req: Request) => {
       const topic = String(job.input?.topic || "").trim();
       const customPrompt = String(job.input?.prompt || "").trim();
       const aspectRatio = job.input?.aspect_ratio === "16:9" ? "16:9" : "9:16";
+      const sourceUrl = String(job.input?.source_media_url || job.source_url || "").trim();
       if (!topic && !customPrompt) return reply({ ok: false, error: "render_prompt_missing" }, 400);
+      if (sourceUrl && !isAllowedSourceUrl(sourceUrl)) return reply({ ok: false, error: "source_media_host_not_allowed" }, 400);
       delete output.provider_operation;
       delete output.provider_interaction_id;
       delete output.provider_video_uri;
       delete output.provider_error;
       delete output.provider_http_status;
+      delete output.next_retry_at;
       const prompt = (customPrompt || ("Create an original, rights-cleared Elite Media video about: " + topic +
         ". " + (aspectRatio === "16:9" ? "Landscape 16:9 website hero composition." : "Portrait 9:16 mobile-first composition.") +
         " Premium obsidian and champagne-gold visual direction, clear subject, natural cinematic motion, accurate claims only, no fake interface text, no logos, no copyrighted characters or music.")).slice(0, 5000);
-      const response = await fetch(`${GEMINI_API}/interactions`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          model: VIDEO_MODEL,
-          input: prompt,
-          background: true,
-          response_format: { type: "video", delivery: "uri", aspect_ratio: aspectRatio },
-          generation_config: { video_config: { task: "text_to_video" } },
-        }),
-        signal: AbortSignal.timeout(30000),
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok || !payload?.id) {
-        const reason = String(payload?.error?.message || payload?.message || "provider_request_rejected").slice(0, 240);
-        await admin.from("elite_media_generation_jobs").update({ status: "failed", output: { ...output, provider_error: reason, provider_http_status: response.status }, updated_at: new Date().toISOString() }).eq("id", job.id);
-        return reply({ ok: false, error: "video_provider_submission_failed", provider_status: response.status, detail: reason }, 502);
+      const keys: Array<{ slot: string; value: string }> = [{ slot: "primary", value: primaryKey }];
+      if (secondaryKey && secondaryKey !== primaryKey) keys.push({ slot: "automation_secondary", value: secondaryKey });
+      let submitted: any = null;
+      let usedSlot = "primary";
+      let lastFailure: any = null;
+      let sourceFile: any = null;
+      for (const candidate of keys) {
+        try {
+          if (sourceUrl) {
+            if (output.provider_source_file_name && output.provider_key_slot === candidate.slot) {
+              sourceFile = await getGeminiSourceFile(String(output.provider_source_file_name), candidate.value);
+              sourceFile.bytes = Number(output.provider_source_bytes || 0);
+            } else {
+              sourceFile = await uploadSourceToGemini(sourceUrl, candidate.value, job.id);
+            }
+            output.provider_source_file_name = sourceFile.name;
+            output.provider_source_file_uri = sourceFile.uri;
+            output.provider_source_mime_type = sourceFile.mime_type;
+            output.provider_source_bytes = sourceFile.bytes || Number(output.provider_source_bytes || 0);
+            output.provider_source_state = sourceFile.state;
+            output.provider_key_slot = candidate.slot;
+            if (sourceFile.state !== "ACTIVE") {
+              output.next_retry_at = new Date(Date.now() + 60000).toISOString();
+              await admin.from("elite_media_generation_jobs").update({ status: "queued", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+              return reply({ ok: true, job_id: job.id, status: "queued", source_file_state: sourceFile.state, retry_after_seconds: 60 }, 202);
+            }
+          }
+          const input = sourceFile
+            ? [
+                { type: "video", uri: sourceFile.uri || output.provider_source_file_uri, mime_type: sourceFile.mime_type || output.provider_source_mime_type || "video/mp4" },
+                { type: "text", text: "Edit the supplied source video according to this creative brief. Preserve the real subject and factual content; improve pacing, framing, lighting and visual continuity without inventing events, testimonials, logos or claims. " + prompt },
+              ]
+            : prompt;
+          const response = await fetch(GEMINI_API + "/interactions", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-goog-api-key": candidate.value },
+            body: JSON.stringify({
+              model: VIDEO_MODEL, input, background: true,
+              response_format: { type: "video", delivery: "uri", aspect_ratio: aspectRatio },
+              generation_config: { video_config: { task: sourceFile ? "edit" : "text_to_video" } },
+            }),
+            signal: AbortSignal.timeout(30000),
+          });
+          const payload = await response.json().catch(() => null);
+          if (!response.ok || !payload?.id) {
+            lastFailure = { status: response.status, payload };
+            if (retryableProviderFailure(response.status, payload)) continue;
+            break;
+          }
+          submitted = payload;
+          usedSlot = candidate.slot;
+          break;
+        } catch (error) {
+          lastFailure = { status: 0, payload: { error: String(error).slice(0, 240) } };
+          if (/429|408|425|500|502|503|504|RESOURCE_EXHAUSTED|UNAVAILABLE|QUOTA/i.test(String(error))) continue;
+          break;
+        }
+      }
+      if (!submitted?.id) {
+        const failureStatus = Number(lastFailure?.status || 0);
+        const failurePayload = lastFailure?.payload || {};
+        const reason = String(failurePayload?.error?.message || failurePayload?.error?.status ||
+          failurePayload?.errors?.[0]?.message || failurePayload?.message || failurePayload?.error || "provider_request_rejected").slice(0, 240);
+        const retryable = retryableProviderFailure(failureStatus, failurePayload) ||
+          /RESOURCE_EXHAUSTED|UNAVAILABLE|QUOTA|RATE_LIMIT|source_upload_(429|500|502|503|504)/i.test(reason);
+        const attempts = Number(output.provider_attempts || 0) + 1;
+        output.provider_error = reason;
+        output.provider_http_status = failureStatus || null;
+        output.provider_attempts = attempts;
+        output.provider_failure_at = new Date().toISOString();
+        if (retryable && attempts < 3) {
+          const retrySeconds = Math.min(1800, 300 * attempts);
+          output.next_retry_at = new Date(Date.now() + retrySeconds * 1000).toISOString();
+          await admin.from("elite_media_generation_jobs").update({ status: "queued", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+          return reply({ ok: true, job_id: job.id, status: "queued", retry_after_seconds: retrySeconds, provider_error: reason }, 202);
+        }
+        await admin.from("elite_media_generation_jobs").update({ status: "failed", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+        return reply({ ok: false, error: "video_provider_submission_failed", provider_status: failureStatus || null, detail: reason }, 502);
       }
       output.provider = "google_gemini_omni";
       output.model = VIDEO_MODEL;
-      output.provider_interaction_id = payload.id;
-      output.aspect_ratio = aspectRatio;
-      const initialVideo = (payload?.steps || []).filter((step: any) => step?.type === "model_output").flatMap((step: any) => Array.isArray(step?.content) ? step.content : []).find((item: any) => item?.type === "video") || payload?.output_video || null;
+      output.provider_key_slot = usedSlot;
+      output.provider_interaction_id = submitted.id;
+      const initialVideo = (submitted?.steps || []).filter((step: any) => step?.type === "model_output")
+        .flatMap((step: any) => Array.isArray(step?.content) ? step.content : [])
+        .find((item: any) => item?.type === "video") || submitted?.output_video || null;
       if (typeof initialVideo?.uri === "string") output.provider_video_uri = initialVideo.uri;
-      output.provider_status = payload.status || "in_progress";
+      output.aspect_ratio = aspectRatio;
+      output.provider_status = submitted.status || "in_progress";
+      output.provider_attempts = Number(output.provider_attempts || 0);
       output.submitted_at = new Date().toISOString();
-      const { error } = await admin.from("elite_media_generation_jobs")
-        .update({ status: "rendering", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+      delete output.next_retry_at;
+      const { error } = await admin.from("elite_media_generation_jobs").update({ status: "rendering", output, updated_at: new Date().toISOString() }).eq("id", job.id);
       if (error) throw error;
-      return reply({ ok: true, job_id: job.id, status: "rendering", interaction_submitted: true }, 202);
+      return reply({ ok: true, job_id: job.id, status: "rendering", interaction_submitted: true, source_media_used: !!sourceUrl, provider_key_slot: usedSlot }, 202);
     }
 
     if (action === "poll") {
@@ -165,6 +359,8 @@ Deno.serve(async (req: Request) => {
       }
       const interactionId = String(output.provider_interaction_id || "");
       if (!interactionId) return reply({ ok: false, error: "provider_interaction_not_submitted" }, 409);
+      const key = pollKey;
+      if (!key) return reply({ ok: false, error: "gemini_key_slot_unavailable" }, 503);
       const poll = await fetch(`${GEMINI_API}/interactions/${encodeURIComponent(interactionId)}`, {
         headers: { "x-goog-api-key": key },
         signal: AbortSignal.timeout(30000),
@@ -198,6 +394,10 @@ Deno.serve(async (req: Request) => {
         (state?.steps || []).filter((step: any) => step?.type === "model_output")
           .flatMap((step: any) => Array.isArray(step?.content) ? step.content : [])
           .find((item: any) => item?.type === "video") || state?.output_video || null;
+      if (typeof videoBlock?.uri === "string") {
+        output.provider_video_uri = videoBlock.uri;
+        await admin.from("elite_media_generation_jobs").update({ output, updated_at: new Date().toISOString() }).eq("id", job.id);
+      }
       let bytes: Uint8Array;
       if (typeof videoBlock?.data === "string" && videoBlock.data.length > 0) {
         const binary = atob(videoBlock.data);
