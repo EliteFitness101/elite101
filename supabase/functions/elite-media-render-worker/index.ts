@@ -9,7 +9,7 @@ const VIDEO_MODEL = "gemini-omni-1.1-flash";
 const BUCKET = "resofit-paid-deliverables";
 const cors = {
   "Access-Control-Allow-Origin": "https://elite.resofit.fit",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-gemini-automation-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Content-Type": "application/json",
   "Cache-Control": "no-store",
@@ -244,10 +244,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const primaryKey = ["start", "poll"].includes(action) ? await geminiKey() : "";
-    let secondaryKey = internalServiceRequest
-      ? String(req.headers.get("x-gemini-automation-key") || Deno.env.get("GEMINI_AUTOMATION_API_KEY") || Deno.env.get("GEMINI_API_KEY1") || "").trim()
-      : String(Deno.env.get("GEMINI_AUTOMATION_API_KEY") || Deno.env.get("GEMINI_API_KEY1") || "").trim();
-    if (!secondaryKey) secondaryKey = await runtimeSecret("GEMINI_API_KEY1") || await runtimeSecret("GEMINI_AUTOMATION_API_KEY");
+    let secondaryKey = String(Deno.env.get("GEMINI_API_KEY1") || "").trim();
+    if (!secondaryKey) secondaryKey = await runtimeSecret("GEMINI_API_KEY1");
     const pollKey = output.provider_key_slot === "automation_secondary" ? secondaryKey : primaryKey;
     if (["start", "poll"].includes(action) && !pollKey && !secondaryKey) return reply({ ok: false, error: "gemini_api_key_missing" }, 503);
     if (action === "start") {
