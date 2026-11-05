@@ -36,6 +36,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+      - name: Poll Gemini Omni generation queue
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/elite-media-poll-worker.mjs
       - name: Process Elite Media queue
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
