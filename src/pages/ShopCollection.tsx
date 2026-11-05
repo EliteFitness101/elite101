@@ -228,7 +228,8 @@ export default function ShopCollection() {
                   );
                 }
                 const product = entry.product;
-                const canBuy = Boolean(item.purchase_enabled && product?.published && product?.variant_price > 0);
+                const productMode = String(product?.fulfillment_mode || item.fulfillment_mode || "").toLowerCase();
+                const canBuy = Boolean(item.purchase_enabled && product?.published && product?.variant_price > 0 && ["digital", "physical", "hybrid", "service"].includes(productMode));
                 return (
                   <article key={item.sku || index} className="elite-glass overflow-hidden rounded-3xl">
                     {product?.image_src ? (
@@ -243,7 +244,7 @@ export default function ShopCollection() {
                       <h2 className="mt-3 text-xl font-semibold">{product?.title || item.title || "Catalogue item"}</h2>
                       {product ? <p className="mt-2 text-sm text-white/55">{formatNgn(Number(product.variant_price || 0))} · {product.fulfillment_mode || item.fulfillment_mode || "classified"}</p> : <p className="mt-2 text-sm text-white/45">Product is not currently published in the canonical catalogue.</p>}
                       {canBuy ? (
-                        <Button onClick={() => addToCart(product)} className="mt-5 w-full rounded-full bg-[#e9c979] text-[#15130e] hover:bg-[#f3d992]">
+                        <Button onClick={() => { if (product) addToCart(product); }} className="mt-5 w-full rounded-full bg-[#e9c979] text-[#15130e] hover:bg-[#f3d992]">
                           <ShoppingBag className="mr-2 h-4 w-4" /> Add to ResoFit checkout
                         </Button>
                       ) : (
