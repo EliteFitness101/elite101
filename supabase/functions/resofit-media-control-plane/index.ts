@@ -53,7 +53,7 @@ async function workerHealth() {
 async function workerRequest(method: string, key: string, token: string, body?: Uint8Array, type = "application/octet-stream") {
   const encodedKey = key.split("/").map(encodeURIComponent).join("/");
   const upload = method === "PUT";
-  const url = upload ? "https://upload.resofit.fit/?key=" + encodeURIComponent(key) : publicBase + "/" + encodedKey;
+  const url = upload ? "https://upload.resofit.fit/api/ingest-media?key=" + encodeURIComponent(key) : publicBase + "/" + encodedKey;
   const headers = new Headers({ Authorization: "Bearer " + token });
   if (upload) headers.set("Content-Type", type);
   return await fetch(url, {
