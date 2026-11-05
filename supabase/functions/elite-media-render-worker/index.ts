@@ -175,6 +175,7 @@ Deno.serve(async (req: Request) => {
         const providerFailure = {
           status: state?.status || null,
           error: state?.error ?? null,
+          errors: state?.errors ?? null,
           error_message: state?.error_message ?? null,
           finish_reason: state?.finish_reason ?? null,
           steps: (Array.isArray(state?.steps) ? state.steps : []).map((step: any) => ({
@@ -185,7 +186,7 @@ Deno.serve(async (req: Request) => {
           })),
           response_keys: Object.keys(state || {}).slice(0, 40),
         };
-        output.provider_error = String(state?.error?.message || state?.error || state?.error_message || "video_generation_failed").slice(0, 1000);
+        output.provider_error = String(state?.error?.message || state?.error || state?.error_message || JSON.stringify(state?.errors || "video_generation_failed")).slice(0, 1000);
         output.provider_failure = providerFailure;
         output.provider_status = "failed";
         console.error("Gemini Omni generation failed", JSON.stringify(providerFailure).slice(0, 3000));
