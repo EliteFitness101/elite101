@@ -74,7 +74,7 @@ async function processJob(job) {
 
   const sourcePath = job.output?.storage_path;
   const sourceBucket = job.output?.storage_bucket === "resofit-paid-deliverables" ? "resofit-paid-deliverables" : "digital-product-media";
-  const originProvider = job.output?.provider || job.input?.provider || job.output?.source || "unknown";
+  const originProvider = job.output?.provider || job.input?.provider || job.output?.source || (String(job.output?.source_provider || "").toLowerCase().includes("gemini") ? "gemini_api" : "unknown");
   const registryProvider = originProvider === "google_flow_consumer" || originProvider === "google_flow_export"
     ? "elite_google_flow_export_ffmpeg"
     : originProvider === "google_gemini_omni" || originProvider === "gemini_api"
@@ -85,7 +85,8 @@ async function processJob(job) {
     throw new Error("Source storage path does not match the owned Elite job");
   }
   const resolution = job.input?.resolution === "720p" ? "720p" : "320p";
-  const width = resolution === "320p" ? 180 : 405;
+  const aspectRatio = job.input?.aspect_ratio === "16:9" ? "16:9" : "9:16";
+  const width = aspectRatio === "16:9" ? (resolution === "320p" ? 568 : 1280) : (resolution === "320p" ? 180 : 405);
   const height = resolution === "320p" ? 320 : 720;
   const download = await fetch(`${base}/storage/v1/object/authenticated/${sourceBucket}/${sourcePath.split("/").map(encodeURIComponent).join("/")}`, {
     headers: { apikey: key, authorization: `Bearer ${key}` },
@@ -136,8 +137,8 @@ async function processJob(job) {
       body:JSON.stringify({
         source_provider:registryProvider,
         source_asset_id:`${job.id}:${resolution}:ffmpeg-actions-v1`,
-        source_url:publicUrl, canonical_url:publicUrl, brand:"Elite NG", campaign:"elite_media_generation",
-        asset_type:"video", mime_type:"video/mp4", width, height, aspect_ratio:"9:16",
+        source_url:publicUrl, canonical_url:publicUrl, brand:job.output?.brand || "Elite NG", campaign:job.output?.campaign || "elite_media_generation",
+        asset_type:"video", mime_type:"video/mp4", width, height, aspect_ratio:aspectRatio,
         rights_status:"unknown", commercial_status:"review_required",
         qa_status:"pending", qa_reason:"FFmpeg derivative; technical profile and public readback verified. Human/platform QA required before publication.",
         origin_review_status:"pending",
@@ -147,8 +148,8 @@ async function processJob(job) {
         rights_evidence:{ status:"pending_review", provider:originProvider, raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
           raw_storage_path:job.output?.storage_path ?? sourcePath, raw_sha256:job.output?.sha256 ?? null },
         content_pillar:"ELITE_MEDIA",
-        intelligence:{ elite_job_id:job.id, source_provider:originProvider, raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
-          raw_storage_path:job.output?.storage_path ?? sourcePath, resolution, codec:stream.codec_name, pixel_format:stream.pix_fmt,
+        intelligence:{ elite_job_id:job.id, site_slot:job.output?.site_slot || null, source_provider:originProvider, raw_storage_bucket:job.output?.storage_bucket ?? sourceBucket,
+          raw_storage_path:job.output?.storage_path ?? sourcePath, resolution, aspect_ratio:aspectRatio, codec:stream.codec_name, pixel_format:stream.pix_fmt,
           byte_size:rendered.length, sha256:digest, renderer:"GitHub Actions FFmpeg" },
         verified_at:new Date().toISOString(), updated_at:new Date().toISOString()
       })
@@ -177,7 +178,7 @@ async function processJob(job) {
       storage_path:targetPath,
       asset_id:registry[0].id,
       renderer:"GitHub Actions FFmpeg",
-      resolution,width,height,codec:stream.codec_name,pixel_format:stream.pix_fmt,
+      resolution,width,height,aspect_ratio:aspectRatio,codec:stream.codec_name,pixel_format:stream.pix_fmt,
       byte_size:rendered.length,sha256:digest,readback_verified:true,
       ffmpeg_render_pending:false,qa_status:"pending",transcoded_at:new Date().toISOString()
     };
