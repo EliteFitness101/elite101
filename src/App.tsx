@@ -18,16 +18,16 @@ import BrandOnboarding from "./pages/onboarding/BrandOnboarding";
 import ModelDashboard from "./pages/dashboard/ModelDashboard";
 import BrandDashboard from "./pages/dashboard/BrandDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
-import EliteMediaDashboard from "./pages/dashboard/EliteMediaDashboard";
 import NewCampaign from "./pages/campaigns/NewCampaign";
 import CampaignMatches from "./pages/campaigns/CampaignMatches";
 import BookingSuccess from "./pages/BookingSuccess";
 import Questionnaire from "./pages/Questionnaire";
-import Monetization from "./pages/Monetization";
 import EliteCheckout from "./pages/EliteCheckout";
 import EliteManageSubscription from "./pages/EliteManageSubscription";
 import BrandGrowth from "./pages/BrandGrowth";
 const Explore = lazy(() => import("./pages/Explore"));
+const EliteMediaDashboard = lazy(() => import("./pages/dashboard/EliteMediaDashboard"));
+const Monetization = lazy(() => import("./pages/Monetization"));
 const ChatB2KConcierge = lazy(() => import("@/components/ChatB2KConcierge").then((module) => ({ default: module.ChatB2KConcierge })));
 
 const queryClient = new QueryClient();
@@ -49,18 +49,18 @@ const App = () => (
             <Route path="/models/:id" element={<ModelProfile />} />
             <Route path="/booking/success" element={<BookingSuccess />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
-            <Route path="/monetization" element={<Monetization />} />
+            <Route path="/monetization" element={<Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading Elite offers…</div>}><Monetization /></Suspense>} />
             <Route path="/checkout" element={<EliteCheckout />} />
             <Route path="/manage-subscription" element={<EliteManageSubscription />} />
             <Route path="/brand-growth" element={<BrandGrowth />} />
-            <Route path="/offers/:slug" element={<Monetization />} />
+            <Route path="/offers/:slug" element={<Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading offer details…</div>}><Monetization /></Suspense>} />
 
             <Route path="/onboarding/model" element={<ProtectedRoute requireRole="model"><ModelOnboarding /></ProtectedRoute>} />
             <Route path="/onboarding/brand" element={<ProtectedRoute requireRole="brand"><BrandOnboarding /></ProtectedRoute>} />
             <Route path="/dashboard/model" element={<ProtectedRoute requireRole="model"><ModelDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/brand" element={<ProtectedRoute requireRole="brand"><BrandDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/admin" element={<ProtectedRoute requireRole="admin"><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/elite-media" element={<ProtectedRoute><EliteMediaDashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/elite-media" element={<ProtectedRoute><Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading your Elite Media workspace…</div>}><EliteMediaDashboard /></Suspense></ProtectedRoute>} />
             <Route path="/campaigns/new" element={<ProtectedRoute requireRole="brand"><NewCampaign /></ProtectedRoute>} />
             <Route path="/campaigns/:id/matches" element={<ProtectedRoute requireRole="brand"><CampaignMatches /></ProtectedRoute>} />
 
