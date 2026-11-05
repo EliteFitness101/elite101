@@ -242,6 +242,7 @@ Deno.serve(async (req: Request) => {
       const customPrompt = String(job.input?.prompt || "").trim();
       const aspectRatio = job.input?.aspect_ratio === "16:9" ? "16:9" : "9:16";
       const sourceUrl = String(job.input?.source_media_url || job.source_url || "").trim();
+      if (job.input?.source_upload_only === true && !internalServiceRequest) return reply({ ok: false, error: "internal_source_upload_smoke_only" }, 403);
       if (!topic && !customPrompt) return reply({ ok: false, error: "render_prompt_missing" }, 400);
       if (sourceUrl && !isAllowedSourceUrl(sourceUrl)) return reply({ ok: false, error: "source_media_host_not_allowed" }, 400);
       delete output.provider_operation;
@@ -278,6 +279,12 @@ Deno.serve(async (req: Request) => {
               output.next_retry_at = new Date(Date.now() + 60000).toISOString();
               await admin.from("elite_media_generation_jobs").update({ status: "queued", output, updated_at: new Date().toISOString() }).eq("id", job.id);
               return reply({ ok: true, job_id: job.id, status: "queued", source_file_state: sourceFile.state, retry_after_seconds: 60 }, 202);
+            }
+            if (job.input?.source_upload_only === true) {
+              output.source_upload_smoke_verified = true;
+              output.source_upload_smoke_at = new Date().toISOString();
+              await admin.from("elite_media_generation_jobs").update({ status: "ready", output, updated_at: new Date().toISOString() }).eq("id", job.id);
+              return reply({ ok: true, job_id: job.id, status: "ready", source_upload_verified: true, provider_file_uri_persisted: !!output.provider_source_file_uri, source_bytes: output.provider_source_bytes, provider_key_slot: candidate.slot, secondary_provider_key_available: Boolean(secondaryKey) }, 200);
             }
           }
           const input = sourceFile
