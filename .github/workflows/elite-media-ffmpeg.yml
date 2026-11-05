@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/elite-media-ffmpeg.yml'
       - 'scripts/elite-media-ffmpeg-runner.mjs'
+      - 'scripts/elite-media-poll-worker.mjs'
   workflow_dispatch:
     inputs:
       job_id:
