@@ -7,7 +7,8 @@ import {
   ArrowDownRight, ArrowRight, Check, ChevronDown, Clapperboard, Crown, Film,
   Layers3, ShieldCheck, Sparkles, Users, WandSparkles,
 } from "lucide-react";
-import { Navbar } from "@/components/Navbar";\nimport EliteMediaShowcaseVideo from "@/components/EliteMediaShowcaseVideo";
+import { Navbar } from "@/components/Navbar";
+import EliteMediaShowcaseVideo from "@/components/EliteMediaShowcaseVideo";
 import { Button } from "@/components/ui/button";
 
 type Offer = {
@@ -27,7 +28,8 @@ type Offer = {
 
 const offers: Offer[] = [
   {
-    slug: "highlight-launch-pack",\n    video: "/Creating_advertisement_for_creators_20261017004820.mp4",
+    slug: "highlight-launch-pack",
+    video: "/Creating_advertisement_for_creators_20261017004820.mp4",
     name: "Highlight Launch Pack",
     eyebrow: "One-time production",
     price: 49,
@@ -40,7 +42,8 @@ const offers: Offer[] = [
     cta: "Start a launch pack",
   },
   {
-    slug: "creator-starter",\n    video: "/Creator_applying_for_streaming_role_20261017010020.mp4",
+    slug: "creator-starter",
+    video: "/Creator_applying_for_streaming_role_20261017010020.mp4",
     name: "Starter",
     eyebrow: "Creator workspace",
     price: 9,
@@ -53,7 +56,8 @@ const offers: Offer[] = [
     cta: "Choose Starter",
   },
   {
-    slug: "creator-pro",\n    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
+    slug: "creator-pro",
+    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
     name: "Pro",
     eyebrow: "For frequent publishers",
     price: 19,
@@ -67,7 +71,8 @@ const offers: Offer[] = [
     popular: true,
   },
   {
-    slug: "agency-workspace",\n    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
+    slug: "agency-workspace",
+    video: "/Creators_preparing_for_professional_content_20261017003431.mp4",
     name: "Agency Workspace",
     eyebrow: "Multi-creator operations",
     price: 99,
@@ -80,7 +85,8 @@ const offers: Offer[] = [
     cta: "Discuss an agency pilot",
   },
   {
-    slug: "agency-production-retainer",\n    video: "/Livestream_host_recruitment_video_20261017005535.mp4",
+    slug: "agency-production-retainer",
+    video: "/Livestream_host_recruitment_video_20261017005535.mp4",
     name: "Agency Production",
     eyebrow: "Managed service",
     price: 300,
