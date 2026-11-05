@@ -22,6 +22,14 @@ async function geminiKey() {
   return String(data);
 }
 
+async function runtimeSecret(name: string): Promise<string> {
+  try {
+    const { data, error } = await admin.rpc("chatb2k_get_runtime_secret", { p_name: name });
+    if (error || typeof data !== "string") return "";
+    return data.trim();
+  } catch { return ""; }
+}
+
 
 const MAX_SOURCE_BYTES = 250 * 1024 * 1024;
 const ALLOWED_SOURCE_MIMES = ["video/mp4", "video/webm", "video/quicktime", "video/mpeg", "video/3gpp", "video/x-flv", "video/x-ms-wmv"];
@@ -42,11 +50,16 @@ function retryableProviderFailure(status: number, payload: any) {
     details.includes("RESOURCE_EXHAUSTED") || details.includes("UNAVAILABLE") ||
     details.includes("RATE_LIMIT") || details.includes("QUOTA");
 }
-async function fetchAllowedSource(raw: string) {
+async function fetchAllowedSource(raw: string, r2Token = "") {
   let current = new URL(raw);
   for (let attempt = 0; attempt < 6; attempt++) {
     if (!isAllowedSourceUrl(current.toString())) throw new Error("source_media_host_not_allowed");
-    const response = await fetch(current.toString(), { redirect: "manual", signal: AbortSignal.timeout(45000) });
+    const requestHeaders = new Headers();
+    const privateR2Source = current.hostname.toLowerCase() === "media.resofit.fit" &&
+      (current.pathname.startsWith("/elite/raw/") || current.pathname.startsWith("/private/") ||
+       current.pathname.startsWith("/archive/") || current.pathname.startsWith("/bigo_highlights/raw/"));
+    if (privateR2Source && r2Token) requestHeaders.set("Authorization", "Bearer " + r2Token);
+    const response = await fetch(current.toString(), { headers: requestHeaders, redirect: "manual", signal: AbortSignal.timeout(45000) });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       await response.body?.cancel();
@@ -68,7 +81,9 @@ async function fetchAllowedSource(raw: string) {
 }
 async function uploadSourceToGemini(rawUrl: string, apiKey: string, jobId: string) {
   if (!isAllowedSourceUrl(rawUrl)) throw new Error("source_media_host_not_allowed");
-  const source = await fetchAllowedSource(rawUrl);
+  const sourceHost = new URL(rawUrl).hostname.toLowerCase();
+  const r2Token = sourceHost === "media.resofit.fit" ? await runtimeSecret("R2_WRITE_TOKEN") : "";
+  const source = await fetchAllowedSource(rawUrl, r2Token);
   const size = Number(source.headers.get("content-length") || 0);
   if (!Number.isFinite(size) || size < 1024) {
     await source.body?.cancel();
@@ -229,9 +244,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const primaryKey = ["start", "poll"].includes(action) ? await geminiKey() : "";
-    const secondaryKey = internalServiceRequest
+    let secondaryKey = internalServiceRequest
       ? String(req.headers.get("x-gemini-automation-key") || Deno.env.get("GEMINI_AUTOMATION_API_KEY") || Deno.env.get("GEMINI_API_KEY1") || "").trim()
-      : String(Deno.env.get("GEMINI_AUTOMATION_API_KEY") || "").trim();
+      : String(Deno.env.get("GEMINI_AUTOMATION_API_KEY") || Deno.env.get("GEMINI_API_KEY1") || "").trim();
+    if (!secondaryKey) secondaryKey = await runtimeSecret("GEMINI_API_KEY1") || await runtimeSecret("GEMINI_AUTOMATION_API_KEY");
     const pollKey = output.provider_key_slot === "automation_secondary" ? secondaryKey : primaryKey;
     if (["start", "poll"].includes(action) && !pollKey && !secondaryKey) return reply({ ok: false, error: "gemini_api_key_missing" }, 503);
     if (action === "start") {
@@ -354,7 +370,7 @@ Deno.serve(async (req: Request) => {
       delete output.next_retry_at;
       const { error } = await admin.from("elite_media_generation_jobs").update({ status: "rendering", output, updated_at: new Date().toISOString() }).eq("id", job.id);
       if (error) throw error;
-      return reply({ ok: true, job_id: job.id, status: "rendering", interaction_submitted: true, source_media_used: !!sourceUrl, provider_key_slot: usedSlot }, 202);
+      return reply({ ok: true, job_id: job.id, status: "rendering", interaction_submitted: true, source_media_used: !!sourceUrl, provider_key_slot: usedSlot, secondary_provider_key_available: Boolean(secondaryKey) }, 202);
     }
 
     if (action === "poll") {
