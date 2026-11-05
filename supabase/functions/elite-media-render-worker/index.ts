@@ -74,7 +74,13 @@ Deno.serve(async (req: Request) => {
     if (!token) return reply({ ok: false, error: "authentication_required" }, 401);
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "status");
-    const internalServiceRequest = token === serviceKey && ["start", "poll"].includes(action);
+    const tokenParts = token.split(".");
+    let tokenRole = "";
+    try {
+      const payload = JSON.parse(atob(tokenParts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      tokenRole = String(payload.role || "");
+    } catch { tokenRole = ""; }
+    const internalServiceRequest = tokenRole === "service_role" && ["start", "poll"].includes(action);
     let userId = "";
     if (internalServiceRequest) {
       userId = String(body.user_id || "").trim();
