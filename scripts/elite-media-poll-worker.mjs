@@ -19,13 +19,19 @@ async function request(path, init = {}) {
   return body ? JSON.parse(body) : null;
 }
 
+const smokeJobs = await request("/rest/v1/elite_media_generation_jobs?job_type=eq.video_render&select=output&order=updated_at.desc&limit=20");
+const workerSecondaryKeyAvailable = (smokeJobs || []).some(job =>
+  job.output?.source_upload_smoke_verified === true && job.output?.secondary_provider_key_available === true
+);
+const secondaryKeyAvailable = Boolean(secondaryGeminiKey || workerSecondaryKeyAvailable);
+console.log("Secondary Gemini provider key available inside worker:", workerSecondaryKeyAvailable);
 const queuedJobs = await request("/rest/v1/elite_media_generation_jobs?status=eq.queued&job_type=eq.video_render&select=id,user_id,input,output&order=created_at.asc&limit=30");
 const now = Date.now();
 const startable = (queuedJobs || []).filter(job => {
   const retryAt = Date.parse(job.output?.next_retry_at || "");
   const due = !job.output?.next_retry_at || Number.isNaN(retryAt) || retryAt <= now;
   const attempts = Number(job.output?.provider_attempts || 0);
-  return job.user_id && job.input?.start_automatically === true && due && attempts < 3 && (secondaryGeminiKey || job.input?.source_upload_only === true);
+  return job.user_id && job.input?.start_automatically === true && due && attempts < 3 && (secondaryKeyAvailable || job.input?.source_upload_only === true);
 }).slice(0, 3);
 const automationHeader = secondaryGeminiKey ? { "x-gemini-automation-key": secondaryGeminiKey } : {};
 console.log(`Gemini Omni start queue: ${startable.length} eligible job(s)`);
@@ -44,7 +50,7 @@ for (const job of startable) {
       console.error(JSON.stringify({ job_id: job.id, start_status: response.status, error: result?.error || body.slice(0, 300) }));
       continue;
     }
-    console.log(JSON.stringify({ job_id: job.id, start: result?.status || "submitted", interaction_submitted: result?.interaction_submitted || false, provider_key_slot: result?.provider_key_slot || "primary" }));
+    console.log(JSON.stringify({ job_id: job.id, start: result?.status || "submitted", interaction_submitted: result?.interaction_submitted || false, provider_key_slot: result?.provider_key_slot || "primary", secondary_key_available: result?.secondary_provider_key_available ?? secondaryKeyAvailable }));
   } catch (error) {
     console.error(JSON.stringify({ job_id: job.id, start_error: String(error).slice(0, 300) }));
   }
