@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
+import EliteMediaShowcaseVideo from "@/components/EliteMediaShowcaseVideo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -231,19 +232,26 @@ export default function EliteMediaDashboard() {
     await load();
   };
 
-  if (loading) return <div className="min-h-screen"><Navbar /><main className="container py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-gold" /></main></div>;
+  if (loading) return <div className="min-h-screen"><Navbar variant="elite-media" brandTo="/dashboard/elite-media" /><main className="container py-20 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-gold" /></main></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="container max-w-5xl py-8 md:py-12 space-y-7">
-        <header className="flex flex-wrap items-end justify-between gap-4">
+        <header className="grid items-center gap-6 lg:grid-cols-[1.05fr_.95fr]">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-gold">Elite Media · Customer workspace</p>
             <h1 className="mt-2 font-display text-3xl md:text-4xl">Your content operation</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Manage your creator brief, authorized media sources, consent, trial progress, and subscription status in one place.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Move from approved footage to polished, reviewed content. Manage your brief, authorized media, consent, trial progress, and subscription status in one workspace.</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button asChild className="bg-gold text-black hover:opacity-90"><Link to="/monetization">Compare plans <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+              <Button asChild variant="outline" className="border-gold/40"><Link to="/questionnaire">Start a production brief <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+            </div>
           </div>
-          <Button asChild variant="outline" className="border-gold/40"><Link to="/monetization">View plans <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <div>
+            <EliteMediaShowcaseVideo src="/Creators_preparing_for_professional_content_20261017003431.mp4" title="Elite creator production in action" className="aspect-video w-full rounded-3xl border border-gold/20 shadow-2xl shadow-black/40" />
+            <p className="mt-2 text-xs text-muted-foreground">Video plays while visible. Tap the speaker to hear audio.</p>
+          </div>
         </header>
 
         {requests.length > 0 && (
