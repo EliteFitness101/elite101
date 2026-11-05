@@ -168,7 +168,8 @@ function PricingPage() {
       <Navbar variant="elite-media" brandTo="/monetization" />
       <div className="elite-atmosphere" aria-hidden="true"><span /><span /><span /></div>
       <header className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 md:pb-24 md:pt-24">
-        <div className="mx-auto max-w-4xl text-center">
+        <EliteMediaShowcaseVideo src="/Creators_preparing_for_professional_content_20261017003431.mp4" title="Elite creator production showcase" className="absolute inset-0 z-0 min-h-[30rem] rounded-b-[3rem] opacity-35" />
+        <div className="relative z-20 mx-auto max-w-4xl text-center">
           <span className="elite-pill mb-7"><span className="elite-live-dot" /> THE CREATOR OPERATING SYSTEM</span>
           <p className="elite-kicker mb-5">ELITE MEDIA · CREATOR GROWTH & AUTOMATION</p>
           <h1 className="text-balance text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl md:text-8xl">Make every moment <span className="elite-gold-text">work harder.</span></h1>
@@ -274,7 +275,7 @@ function PricingPage() {
         </div>
       </motion.section>
 
-      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20">
+      <motion.section initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: 0.5 }} className="relative z-10 mx-auto max-w-4xl px-4 py-14 sm:px-6 md:py-20" id="faq">
         <div className="mb-8 text-center"><p className="elite-kicker mb-3">GOOD TO KNOW</p><h2 className="text-3xl font-semibold tracking-tight sm:text-5xl">Frequently asked.</h2></div>
         <Accordion.Root type="single" collapsible className="space-y-3">
           {faqs.map((faq, index) => <Accordion.Item value={`faq-${index}`} key={faq.q} className="elite-glass overflow-hidden rounded-2xl"><Accordion.Header><Accordion.Trigger className="flex w-full items-center justify-between gap-4 p-5 text-left text-sm font-medium hover:text-[#f4d58b] [&[data-state=open]>svg]:rotate-180">{faq.q}<ChevronDown className="h-4 w-4 shrink-0 transition-transform" /></Accordion.Trigger></Accordion.Header><Accordion.Content className="px-5 pb-5 text-sm leading-7 text-white/55 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">{faq.a}</Accordion.Content></Accordion.Item>)}
