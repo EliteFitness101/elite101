@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import EliteMediaShowcaseVideo from "@/components/EliteMediaShowcaseVideo";
+import { useEliteSiteMediaAssets } from "@/hooks/useEliteSiteMediaAssets";
 import { Button } from "@/components/ui/button";
 
 type Offer = {
@@ -123,11 +124,11 @@ function OfferButton({ offer }: { offer: Offer }) {
   );
 }
 
-function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstimate?: number; fxUpdatedAt?: string }) {
+function OfferCard({ offer, ngnEstimate, fxUpdatedAt, mediaAssets }: { offer: Offer; ngnEstimate?: number; fxUpdatedAt?: string; mediaAssets: Record<string, { src: string }> }) {
   const requestOnly = ["agency-workspace", "agency-production-retainer"].includes(offer.slug);
   return (
     <article className={`elite-offer-card relative flex h-full flex-col rounded-[1.7rem] p-6 md:p-7 ${offer.popular ? "elite-offer-featured" : ""}`}>
-      <EliteMediaShowcaseVideo src={offer.video} title={`${offer.name} preview`} className="mb-5 aspect-video w-full rounded-2xl border border-white/10" />
+      <EliteMediaShowcaseVideo src={mediaAssets[`offer:${offer.slug}`]?.src || offer.video} title={`${offer.name} preview`} className="mb-5 aspect-video w-full rounded-2xl border border-white/10" />
       {offer.popular && <span className="elite-pill absolute right-5 top-5"><Sparkles className="h-3 w-3" /> MOST POPULAR</span>}
       <p className="elite-kicker mb-3">{offer.eyebrow}</p>
       <h3 className="pr-2 text-2xl font-semibold tracking-tight">{offer.name}</h3>
@@ -152,6 +153,7 @@ function OfferCard({ offer, ngnEstimate, fxUpdatedAt }: { offer: Offer; ngnEstim
 }
 
 function PricingPage() {
+  const mediaAssets = useEliteSiteMediaAssets();
   const [fxQuotes, setFxQuotes] = useState<Record<string, { estimated_ngn: number; fx_source_updated_at: string }>>({});
   const [fxError, setFxError] = useState(false);
   useEffect(() => {
@@ -170,7 +172,7 @@ function PricingPage() {
       <Navbar variant="elite-media" brandTo="/monetization" />
       <div className="elite-atmosphere" aria-hidden="true"><span /><span /><span /></div>
       <header className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 md:pb-24 md:pt-24">
-        <EliteMediaShowcaseVideo src="/Creators_preparing_for_professional_content_20261017003431.mp4" title="Elite creator production showcase" className="absolute inset-0 z-0 min-h-[30rem] rounded-b-[3rem] opacity-35" />
+        <EliteMediaShowcaseVideo src={mediaAssets.hero_background?.src || "/Creators_preparing_for_professional_content_20261017003431.mp4"} title="Elite creator production showcase" className="absolute inset-0 z-0 min-h-[30rem] rounded-b-[3rem] opacity-35" />
         <div className="relative z-20 mx-auto max-w-4xl text-center">
           <span className="elite-pill mb-7"><span className="elite-live-dot" /> THE CREATOR OPERATING SYSTEM</span>
           <p className="elite-kicker mb-5">ELITE MEDIA · CREATOR GROWTH & AUTOMATION</p>
@@ -222,7 +224,7 @@ function PricingPage() {
         </div>
         {fxError && <p role="status" className="mb-5 text-sm text-white/60">Live FX is temporarily unavailable. No hardcoded NGN estimate is shown; USD prices remain visible.</p>}
         <div className="grid gap-4 lg:grid-cols-3">
-          {offers.filter((offer) => ["creator-starter", "creator-pro", "agency-workspace"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} />)}
+          {offers.filter((offer) => ["creator-starter", "creator-pro", "agency-workspace"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} mediaAssets={mediaAssets} />)}
         </div>
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           {offers.filter((offer) => ["highlight-launch-pack", "agency-production-retainer"].includes(offer.slug)).map((offer) => <OfferCard key={offer.slug} offer={offer} ngnEstimate={fxQuotes[offer.slug]?.estimated_ngn} fxUpdatedAt={fxQuotes[offer.slug]?.fx_source_updated_at} />)}
