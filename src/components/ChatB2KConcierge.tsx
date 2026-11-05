@@ -41,7 +41,7 @@ export function ChatB2KConcierge() {
       setMessages((old) => [...old, { role: "assistant", content: data.reply }]);
     } catch (err) {
       const detail = err instanceof Error ? err.message : "Connection unavailable";
-      setMessages((old) => [...old, { role: "assistant", content: "I couldn’t reach the live intelligence service just now. Your message has not been actioned. Please try again shortly. (" + detail + ")" }]);
+      setMessages((old) => [...old, { role: "assistant", content: "ChatB2K is temporarily unavailable. Your message has not been actioned. Please try again shortly, or use one of the guided options below." }]);
     } finally {
       setBusy(false);
     }
@@ -66,13 +66,13 @@ export function ChatB2KConcierge() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="grid h-12 w-12 place-items-center rounded-2xl border border-amber-200/40 bg-gradient-to-br from-amber-100/20 to-amber-500/5 text-amber-100 shadow-inner"><Sparkles className="h-6 w-6" /></div>
-                  <div><p className="font-semibold tracking-wide">ChatB2K <span className="text-amber-200">Omni</span></p><p className="mt-0.5 text-xs text-emerald-200/80">Live intelligence · language-aware</p></div>
+                  <div><p className="font-semibold tracking-wide">ChatB2K <span className="text-amber-200">Omni</span></p><p className="mt-0.5 text-xs text-emerald-200/80">AI concierge · language-aware</p></div>
                 </div>
                 <button onClick={() => setOpen(false)} aria-label="Close assistant" className="rounded-full p-2 text-white/65 hover:bg-white/10"><X className="h-4 w-4" /></button>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/25 p-1">
                 <button onClick={() => setPersona("coach-b2k")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "coach-b2k" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Coach B2K · Firm & caring</button>
-                <button onClick={() => setPersona("mavia")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "mavia" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Mavia · Concierge</button>
+                <button onClick={() => setPersona("mavia")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "mavia" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Mavia · HR & Concierge</button>
               </div>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -94,7 +94,7 @@ export function ChatB2KConcierge() {
         )}
       </AnimatePresence>
       <button onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label={open ? "Close ChatB2K Omni" : "Open ChatB2K Omni"} className="ml-auto flex items-center gap-2 rounded-full border border-amber-200/40 bg-[#090a0e]/95 px-4 py-3 text-sm font-semibold text-white shadow-xl shadow-black/50 backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-amber-200/80">
-        {open ? <X className="h-4 w-4 text-amber-200" /> : <MessageCircle className="h-5 w-5 text-amber-200" />}<span>ChatB2K Omni</span><span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.8)]" />
+        {open ? <X className="h-4 w-4 text-amber-200" /> : <MessageCircle className="h-5 w-5 text-amber-200" />}<span>ChatB2K Omni</span><span className="h-2 w-2 rounded-full bg-amber-200 shadow-[0_0_10px_rgba(253,230,138,.45)]" />
       </button>
     </div>
   );
