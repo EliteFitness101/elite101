@@ -139,6 +139,8 @@ async function processJob(job) {
         source_asset_id:`${job.id}:${resolution}:ffmpeg-actions-v1`,
         source_url:publicUrl, canonical_url:publicUrl, brand:job.output?.brand || "Elite NG", campaign:job.output?.campaign || "elite_media_generation",
         asset_type:"video", mime_type:"video/mp4", width, height, aspect_ratio:aspectRatio,
+        visual_summary:job.output?.visual_summary || job.input?.topic || "Elite NG generated video asset",
+        alt_text:job.output?.alt_text || job.input?.topic || "Elite NG generated video asset",
         rights_status:"unknown", commercial_status:"review_required",
         qa_status:"pending", qa_reason:"FFmpeg derivative; technical profile and public readback verified. Human/platform QA required before publication.",
         origin_review_status:"pending",
