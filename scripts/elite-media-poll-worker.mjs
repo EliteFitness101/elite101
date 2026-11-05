@@ -1,0 +1,51 @@
+const base = (process.env.SUPABASE_URL || "").replace(/\/$/, "");
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+if (!base || !key) throw new Error("Missing Supabase runner credentials");
+
+async function request(path, init = {}) {
+  const response = await fetch(base + path, {
+    ...init,
+    headers: {
+      apikey: key,
+      authorization: `Bearer ${key}`,
+      ...(init.headers || {}),
+    },
+    signal: AbortSignal.timeout(90000),
+  });
+  const body = await response.text();
+  if (!response.ok) throw new Error(`Supabase HTTP ${response.status}: ${body.slice(0, 400)}`);
+  return body ? JSON.parse(body) : null;
+}
+
+const jobs = await request("/rest/v1/elite_media_generation_jobs?status=eq.rendering&job_type=eq.video_render&select=id,user_id,output&order=created_at.asc&limit=30");
+const pending = (jobs || []).filter(job =>
+  job.user_id &&
+  job.output?.provider_interaction_id &&
+  job.output?.ffmpeg_render_pending !== true
+).slice(0, 8);
+
+console.log(`Gemini Omni poll queue: ${pending.length} eligible job(s)`);
+for (const job of pending) {
+  try {
+    const response = await fetch(`${base}/functions/v1/elite-media-render-worker`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ action: "poll", job_id: job.id, user_id: job.user_id }),
+      signal: AbortSignal.timeout(90000),
+    });
+    const body = await response.text();
+    let result = null;
+    try { result = JSON.parse(body); } catch {}
+    if (!response.ok) {
+      console.error(JSON.stringify({ job_id: job.id, poll_status: response.status, error: result?.error || body.slice(0, 300) }));
+      continue;
+    }
+    console.log(JSON.stringify({ job_id: job.id, status: result?.status || result?.worker?.status || "polled", ffmpeg_queued: result?.ffmpeg_queued || false }));
+  } catch (error) {
+    console.error(JSON.stringify({ job_id: job.id, error: String(error).slice(0, 300) }));
+  }
+}
