@@ -123,7 +123,12 @@ export default function EliteMediaCeoDashboard() {
         host_id: hostId.trim() || null, expected_handle: expectedHandle.trim(),
         owner_evidence_url: ownerEvidenceUrl.trim(), confirm_owner: confirmOwner,
       });
-      toast.success(result.assignment_status === "verified" ? "Client/host channel assignment verified." : "Assignment saved for verification.");
+      if (result.assignment_status === "verified") {
+        await api("/api/integrations/buffer/registry", "POST", { action: "enable_channel", channel_id: channelId, client_key: clientKey.trim() });
+        toast.success("Client/host assignment verified and live Buffer queue enabled for this channel.");
+      } else {
+        toast.success("Assignment saved for verification; live publishing remains disabled for this mapping.");
+      }
       setConfirmOwner(false);
       await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Channel assignment failed."); }
