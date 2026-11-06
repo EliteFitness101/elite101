@@ -29,6 +29,14 @@ type ManifestItem = {
   status_label?: string;
   block_reason?: string;
   description?: string;
+  image_url?: string;
+  price?: number | string;
+  supplier_price?: number | string;
+  price_currency?: string;
+  source_seller_name?: string;
+  stock_status?: string;
+  stock_label?: string;
+  stock_quantity?: number | string | null;
   [key: string]: unknown;
 };
 
@@ -257,12 +265,17 @@ export default function ShopCollection() {
                     ? item.block_reason
                     : "Offer status, source-page evidence and fulfilment readiness are resolved from the canonical supplier registry.";
                   return (
-                    <article key={item.external_product_id || item.registry_product_id || index} className="elite-glass rounded-3xl p-6">
+                    <article key={item.external_product_id || item.registry_product_id || index} className="elite-glass overflow-hidden rounded-3xl">
+                      {safeHttpsUrl(item.image_url) ? <img src={safeHttpsUrl(item.image_url)} alt={item.title || "Supplier product"} className="aspect-[16/10] w-full object-cover" loading="lazy" /> : <div className="flex aspect-[16/10] items-center justify-center bg-white/[0.03]"><PackageCheck className="h-8 w-8 text-white/20" /></div>}
+                      <div className="p-6">
                       <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-white/45">
                         <LockKeyhole className="h-4 w-4" /> {supplierState}
                       </div>
                       <h2 className="mt-4 text-xl font-semibold">{item.title || "External supplier offer"}</h2>
                       <p className="mt-2 text-sm leading-6 text-white/55">{String(item.description || supplierDetail)}</p>
+                      {Number(item.price) > 0 && <p className="mt-3 text-lg font-semibold text-[#f4d58b]">{formatNgn(Number(item.price))} <span className="text-xs font-normal text-white/45">indicative ResoFit price</span></p>}
+                      {Number(item.supplier_price) > 0 && <p className="mt-1 text-xs text-white/40">Supplier reference: {formatNgn(Number(item.supplier_price))}</p>}
+                      {(item.source_seller_name || item.stock_label) && <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/45">{item.source_seller_name && <span>Seller: {item.source_seller_name}</span>}{item.stock_label && <span>· Stock: {String(item.stock_label).replaceAll("_", " ")}</span>}{Number(item.stock_quantity) > 0 && <span>· {Number(item.stock_quantity)} shown</span>}</div>}
                       {canExternalCheckout ? (
                         <a href={supplierPageUrl} target="_blank" rel="noopener noreferrer nofollow" className="mt-5 inline-flex rounded-full border border-[#e9c979]/40 px-4 py-2 text-sm text-[#f4d58b] hover:bg-white/5">
                           Continue to supplier checkout <ArrowRight className="ml-2 h-4 w-4" />
@@ -274,6 +287,7 @@ export default function ShopCollection() {
                       ) : (
                         <span className="mt-5 inline-flex rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/45">{supplierState}</span>
                       )}
+                      </div>
                     </article>
                   );
                 }
