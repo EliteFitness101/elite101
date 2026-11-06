@@ -60,7 +60,7 @@ const Marketplace = () => {
               <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Explore approved public profiles, review their portfolios and connect with talent for your next campaign or collaboration.</p>
             </div>
             <div className="rounded-2xl border border-gold/20 bg-black/40 px-5 py-4 backdrop-blur-xl">
-              <div className="text-3xl font-display text-gradient-gold tabular-nums">{loading ? "—" : {filtered.length}}</div>
+              <div className="text-3xl font-display text-gradient-gold tabular-nums">{loading ? "—" : filtered.length}</div>
               <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Profiles in view</div>
             </div>
           </div>
