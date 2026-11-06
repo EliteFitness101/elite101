@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Activity, ArrowLeft, CheckCircle2, CircleAlert, ExternalLink, Loader2, Plus, RefreshCw, Send, ShieldCheck, Unplug, Video } from "lucide-react";
+import { ArrowLeft, ExternalLink, Loader2, Plus, RefreshCw, Send, ShieldCheck } from "lucide-react";
 
 type Connection = { id: string; label: string; account_id: string | null; account_email: string | null; account_name: string | null; status: string; last_verified_at: string | null; last_error: string | null; connected_at: string | null };
 type Organization = { id: string; connection_id: string; organization_id: string; name: string; active: boolean; last_synced_at: string | null };
@@ -90,7 +90,6 @@ export default function EliteMediaCeoDashboard() {
   const verifiedChannels = useMemo(() => registry.channels.filter((c) => c.is_verified && c.active && !c.provider_disconnected && !c.provider_locked), [registry.channels]);
   const enabledChannels = useMemo(() => verifiedChannels.filter((c) => c.publishing_enabled), [verifiedChannels]);
   const approvedAssets = useMemo(() => registry.assets.filter((a) => a.qa_status === "approved" && a.rights_status === "verified" && a.commercial_status === "authorized" && a.origin_review_status === "approved"), [registry.assets]);
-  const selectedChannel = registry.channels.find((c) => c.channel_id === channelId) || null;
 
   const connect = async () => {
     setBusy("connect");
