@@ -31,6 +31,7 @@ type ManifestItem = {
   description?: string;
   image_url?: string;
   price?: number | string;
+  price_range_max?: number | string | null;
   supplier_price?: number | string;
   price_currency?: string;
   source_seller_name?: string;
@@ -273,7 +274,7 @@ export default function ShopCollection() {
                       </div>
                       <h2 className="mt-4 text-xl font-semibold">{item.title || "External supplier offer"}</h2>
                       <p className="mt-2 text-sm leading-6 text-white/55">{String(item.description || supplierDetail)}</p>
-                      {Number(item.price) > 0 && <p className="mt-3 text-lg font-semibold text-[#f4d58b]">{formatNgn(Number(item.price))} <span className="text-xs font-normal text-white/45">indicative ResoFit price</span></p>}
+                      {Number(item.price) > 0 && <p className="mt-3 text-lg font-semibold text-[#f4d58b]">{Number(item.price_range_max) > Number(item.price) ? `${formatNgn(Number(item.price))}–${formatNgn(Number(item.price_range_max))}` : formatNgn(Number(item.price))} <span className="text-xs font-normal text-white/45">indicative ResoFit price</span></p>}
                       {Number(item.supplier_price) > 0 && <p className="mt-1 text-xs text-white/40">Supplier reference: {formatNgn(Number(item.supplier_price))}</p>}
                       {(item.source_seller_name || item.stock_label) && <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/45">{item.source_seller_name && <span>Seller: {item.source_seller_name}</span>}{item.stock_label && <span>· Stock: {String(item.stock_label).replaceAll("_", " ")}</span>}{Number(item.stock_quantity) > 0 && <span>· {Number(item.stock_quantity)} shown</span>}</div>}
                       {canExternalCheckout ? (
