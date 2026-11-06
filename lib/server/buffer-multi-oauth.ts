@@ -1,4 +1,4 @@
-import { encryptTokenBundle, HttpError, requiredEnv, supabaseConfig } from "./buffer-oauth.js";
+import { encryptTokenBundle, HttpError, requiredEnv, supabaseConfig, validateRedirectUri } from "./buffer-oauth.js";
 import { syncBufferConnection } from "./buffer-multi.js";
 
 export async function completeBufferOAuthConnection(connectionId: string, code: string, verifier: string) {
@@ -10,7 +10,7 @@ export async function completeBufferOAuthConnection(connectionId: string, code: 
   const pending = await pendingResponse.json() as Array<{ id: string; owner_user_id: string; status: string }>;
   if (!pending.length || pending[0].status !== "pending") throw new HttpError(400, "This Buffer connection request is no longer valid.");
 
-  const redirectUri = process.env.BUFFER_REDIRECT_URI || "https://elite.resofit.fit/api/auth/buffer/callback";
+  const redirectUri = validateRedirectUri();
   const tokenResponse = await fetch("https://auth.buffer.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
