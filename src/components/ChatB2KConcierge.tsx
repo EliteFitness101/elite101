@@ -22,7 +22,6 @@ export function ChatB2KConcierge() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: "assistant", content: "Welcome. I’m ChatB2K Omni. Tell me your goal and I’ll help you choose a clear next step. I’ll be compassionate with your circumstances and firm about what moves you forward." },
   ]);
-  const [answerTo, setAnswerTo] = useState("/explore");
   const navigate = useNavigate();
   const location = useLocation();
   const [tipDismissed, setTipDismissed] = useState(false);
@@ -80,7 +79,7 @@ export function ChatB2KConcierge() {
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {messages.map((item, index) => <div key={index} className={`max-w-[95%] whitespace-pre-wrap rounded-2xl p-3 text-sm leading-6 ${item.role === "user" ? "ml-auto rounded-tr-sm border border-amber-100/15 bg-amber-100/10 text-white" : "rounded-tl-sm border border-white/10 bg-white/[0.055] text-white/85"}`}>{item.content}</div>)}
               {busy && <div className="flex items-center gap-2 rounded-2xl border border-amber-200/15 bg-amber-200/[0.06] p-3 text-xs text-amber-100"><span className="h-2 w-2 animate-pulse rounded-full bg-amber-200" /> ChatB2K is thinking…</div>}
-              <div className="flex flex-wrap gap-2">{prompts.map((item) => <button key={item.label} onClick={() => { setAnswerTo(item.to); navigate(item.to); void sendMessage(item.text); }} disabled={busy} className="rounded-full border border-white/15 bg-white/[0.035] px-3 py-2 text-xs text-white/75 transition hover:border-amber-200/50 hover:bg-amber-200/10 disabled:opacity-40">{item.label}</button>)}</div>
+              <div className="flex flex-wrap gap-2">{prompts.map((item) => <button key={item.label} onClick={() => { navigate(item.to); void sendMessage(item.text); }} disabled={busy} className="rounded-full border border-white/15 bg-white/[0.035] px-3 py-2 text-xs text-white/75 transition hover:border-amber-200/50 hover:bg-amber-200/10 disabled:opacity-40">{item.label}</button>)}</div>
             </div>
             <div className="flex items-center justify-between border-t border-white/10 px-4 py-2">
               <span className="flex items-center gap-1.5 text-[10px] text-white/45"><Globe2 className="h-3 w-3" /> Reply language adapts to your message</span>
