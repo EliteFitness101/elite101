@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, MapPin } from "lucide-react";
+import { ArrowRight, Loader2, MapPin, Sparkles } from "lucide-react";
 
 const Marketplace = () => {
   const [models, setModels] = useState<any[]>([]);
@@ -51,12 +51,22 @@ const Marketplace = () => {
     <div className="min-h-screen">
       <Navbar />
       <div className="container py-10 space-y-6">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-gold">Marketplace</div>
-          <h1 className="font-display text-4xl mt-1">Discover talent</h1>
-        </div>
-        <div className="flex gap-3 flex-wrap">
-          <Input placeholder="Search by name or city" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs" />
+        <section className="relative overflow-hidden rounded-[2rem] border border-gold/20 bg-gradient-to-br from-white/[0.07] via-black to-amber-950/20 p-6 sm:p-8">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-gold/10 blur-3xl" />
+          <div className="relative grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
+            <div className="max-w-2xl">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-gold"><Sparkles className="h-3.5 w-3.5" /> Elite talent marketplace</div>
+              <h1 className="mt-3 font-display text-4xl leading-tight sm:text-5xl">Discover talent.<br /><span className="text-gradient-gold">Find the right fit.</span></h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Explore approved public profiles, review their portfolios and connect with talent for your next campaign or collaboration.</p>
+            </div>
+            <div className="rounded-2xl border border-gold/20 bg-black/40 px-5 py-4 backdrop-blur-xl">
+              <div className="text-3xl font-display text-gradient-gold tabular-nums">{loading ? "—" : {filtered.length}}</div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Profiles in view</div>
+            </div>
+          </div>
+        </section>
+        <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center">
+          <Input placeholder="Search by name or city" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-xs rounded-full" />
           <Select value={cat} onValueChange={setCat}>
             <SelectTrigger className="max-w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -66,6 +76,23 @@ const Marketplace = () => {
           </Select>
         </div>
 
+        <section aria-label="How talent discovery works" className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:grid-cols-3">
+          {[
+            { step: "01", title: "Discover", detail: "Browse approved public talent profiles." },
+            { step: "02", title: "Review", detail: "Open a profile to explore its details." },
+            { step: "03", title: "Connect", detail: "Choose the next step for your brief." },
+          ].map((item, index) => (
+            <div key={item.step} className="flex items-start gap-3 rounded-xl px-2 py-2">
+              <span className="font-display text-2xl text-gradient-gold">{item.step}</span>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold">{item.title}</div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
+              </div>
+              {index < 2 && <ArrowRight className="ml-auto mt-1 hidden h-4 w-4 shrink-0 text-gold/60 sm:block" />}
+            </div>
+          ))}
+        </section>
+
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gold" /></div>
         ) : filtered.length === 0 ? (
@@ -73,9 +100,9 @@ const Marketplace = () => {
             <p className="text-muted-foreground">No approved models yet. Be the first — apply now.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 [scrollbar-width:thin] [scrollbar-color:rgba(200,169,106,.45)_transparent]" role="region" aria-label="Approved talent profiles" tabIndex={0}>
             {filtered.map((m) => (
-              <Link key={m.id} to={`/models/${m.id}`} className="glass-strong rounded-2xl overflow-hidden hover:border-gold transition group">
+              <Link key={m.id} to={`/models/${m.id}`} className="glass-strong group w-[72vw] max-w-[280px] shrink-0 snap-start overflow-hidden rounded-2xl border border-white/10 transition hover:-translate-y-1 hover:border-gold/60 sm:w-[280px]">
                 <div className="aspect-[4/5] bg-muted relative">
                   {m.photoUrl ? (
                     <img src={m.photoUrl} alt={m.full_name} className="h-full w-full object-cover group-hover:scale-105 transition" />
