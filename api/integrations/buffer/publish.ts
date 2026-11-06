@@ -52,7 +52,7 @@ export default async function handler(req: any, res: any) {
     if (asset.qa_status !== "approved" || asset.rights_status !== "verified" || asset.commercial_status !== "authorized" || asset.origin_review_status !== "approved") {
       throw new HttpError(409, "Asset is not cleared by QA, rights, commercial and origin review.");
     }
-    if (Array.isArray(asset.publish_blockers) && asset.publish_blockers.length > 0) {
+    if (asset.publish_blockers && (Array.isArray(asset.publish_blockers) ? asset.publish_blockers.length > 0 : Object.keys(asset.publish_blockers).length > 0)) {
       throw new HttpError(409, "Asset has active publishing blockers.");
     }
     if (!channels?.length) throw new HttpError(404, "Target Buffer channel was not found for this account.");
@@ -73,6 +73,7 @@ export default async function handler(req: any, res: any) {
     if (eligibilityField && asset[eligibilityField] !== true) throw new HttpError(409, "Asset is not cleared for this publishing platform.");
     const mediaUrl = String(asset.canonical_url || "");
     if (!/^https:\/\//i.test(mediaUrl)) throw new HttpError(409, "Asset must have a stable public HTTPS media URL.");
+    if (/[?&](?:X-Amz-Signature|signature|token|expires|X-Goog-Signature)=/i.test(mediaUrl)) throw new HttpError(409, "Signed or expiring media URLs cannot be scheduled; use the permanent public CDN URL.");
     const mediaCheck = await fetch(mediaUrl, { method: "HEAD", redirect: "follow" });
     if (!mediaCheck.ok) throw new HttpError(409, "Media URL is not publicly reachable by Buffer.");
     const contentType = mediaCheck.headers.get("content-type") || asset.mime_type || "";
@@ -84,6 +85,7 @@ export default async function handler(req: any, res: any) {
     const existing = await db(`buffer_publications?idempotency_key=eq.${idempotencyKey}&select=id,status,buffer_post_id&limit=1`);
     if (existing?.length) return res.status(200).json({ ok: true, duplicate: true, publication: existing[0] });
 
+    if (!channel.connection_id) throw new HttpError(409, "Target channel has not been linked to a multi-account Buffer OAuth connection. Reconnect and sync this organization.");
     const connection = await getConnection(channel.connection_id, admin.id);
     if (!connection || connection.status !== "connected") throw new HttpError(409, "Buffer account connection is not active. Reconnect it from the CEO dashboard.");
     const token = await getFreshBufferToken(connection);
