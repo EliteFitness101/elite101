@@ -139,6 +139,9 @@
     border-color: hsl(var(--primary) / 0.48);
     transform: translateY(-3px);
   }
+  .conversion-marquee-track { animation: conversion-marquee 36s linear infinite; will-change: transform; }
+  .conversion-marquee-track:hover { animation-play-state: paused; }
+  @keyframes conversion-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   .editorial-hero-overlay {
     background: linear-gradient(90deg, rgb(5 5 5 / 0.88), rgb(5 5 5 / 0.45) 58%, rgb(5 5 5 / 0.2)),
                 linear-gradient(0deg, rgb(5 5 5 / 0.72), transparent 55%);
@@ -168,6 +171,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .conversion-marquee-track { animation: none !important; }
   *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
