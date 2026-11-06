@@ -255,6 +255,7 @@ export default function AdminDashboard() {
             <p className="text-muted-foreground mt-1">Platform analytics & operations</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline" className="border-gold/40 text-gold"><Link to="/dashboard/elite-media/ceo">Elite Media Publishing CEO</Link></Button>
             <Button variant="outline" onClick={connectBuffer} disabled={bufferConnecting}>
               {bufferConnecting ? "Connecting…" : "Connect Buffer"}
             </Button>

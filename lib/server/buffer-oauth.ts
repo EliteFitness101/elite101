@@ -1,4 +1,4 @@
-import { createCipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 export const BUFFER_REDIRECT_URI =
   process.env.BUFFER_REDIRECT_URI || "https://elite.resofit.fit/api/auth/buffer/callback";
@@ -126,6 +126,33 @@ export function encryptTokenBundle(bundle: Record<string, unknown>) {
     token_iv: iv.toString("base64"),
     token_tag: cipher.getAuthTag().toString("base64"),
   };
+}
+
+
+export function decryptTokenBundle(bundle: { token_ciphertext: string; token_iv: string; token_tag: string }): Record<string, unknown> {
+  const raw = requiredEnv("BUFFER_TOKEN_ENCRYPTION_KEY");
+  let key: Buffer;
+  try {
+    key = /^[a-f0-9]{64}$/i.test(raw) ? Buffer.from(raw, "hex") : Buffer.from(raw, "base64");
+  } catch {
+    throw new HttpError(503, "Buffer token encryption key is invalid.");
+  }
+  if (key.length !== 32) throw new HttpError(503, "Buffer token encryption key must decode to 32 bytes.");
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(bundle.token_iv, "base64"));
+    decipher.setAuthTag(Buffer.from(bundle.token_tag, "base64"));
+    const plaintext = Buffer.concat([
+      decipher.update(Buffer.from(bundle.token_ciphertext, "base64")),
+      decipher.final(),
+    ]).toString("utf8");
+    const parsed = JSON.parse(plaintext);
+    if (!parsed || typeof parsed.access_token !== "string" || typeof parsed.refresh_token !== "string") {
+      throw new Error("invalid token bundle");
+    }
+    return parsed as Record<string, unknown>;
+  } catch {
+    throw new HttpError(503, "Stored Buffer credentials could not be decrypted. Reconnect the account.");
+  }
 }
 
 export function clearStateCookie(res: any) {

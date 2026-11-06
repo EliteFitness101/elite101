@@ -6,6 +6,7 @@ import {
   supabaseConfig,
   validateRedirectUri,
 } from "../../../lib/server/buffer-oauth.js";
+import { completeBufferOAuthConnection } from "../../../lib/server/buffer-multi-oauth.js";
 
 function finish(res: any, status: string) {
   clearStateCookie(res);
@@ -23,6 +24,13 @@ function readCookie(req: any, name: string): string | undefined {
   return undefined;
 }
 
+function finishConnection(res: any, status: string) {
+  res.setHeader("Set-Cookie", "buffer_connections_state=; Path=/api/auth/buffer; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  return res.redirect(302, `/dashboard/elite-media/ceo?buffer_connection=${encodeURIComponent(status)}`);
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Pragma", "no-cache");
@@ -37,6 +45,22 @@ export default async function handler(req: any, res: any) {
   const code = typeof query.code === "string" ? query.code : "";
   const providerError = typeof query.error === "string" ? query.error : "";
   const saved = readSignedStateCookie(readCookie(req, "buffer_oauth_state"));
+
+  const connectionSaved = readSignedStateCookie(readCookie(req, "buffer_connections_state"));
+  if (connectionSaved) {
+    if (!state || state !== connectionSaved.state) return finishConnection(res, "state_invalid");
+    if (providerError) return finishConnection(res, "authorization_denied");
+    if (!code) return finishConnection(res, "code_missing");
+    const connectionId = connectionSaved.state.split(".")[0];
+    if (!/^[0-9a-f-]{36}$/i.test(connectionId)) return finishConnection(res, "state_invalid");
+    try {
+      await completeBufferOAuthConnection(connectionId, code, connectionSaved.verifier);
+      return finishConnection(res, "connected");
+    } catch {
+      return finishConnection(res, "connection_failed");
+    }
+  }
+
 
   if (!saved || !state || state !== saved.state) {
     return finish(res, "state_invalid");

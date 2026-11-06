@@ -45,6 +45,7 @@ const EliteManageSubscription = lazy(() => import("./pages/EliteManageSubscripti
 const BrandGrowth = lazy(() => import("./pages/BrandGrowth"));
 const Explore = lazy(() => import("./pages/Explore"));
 const EliteMediaDashboard = lazy(() => import("./pages/dashboard/EliteMediaDashboard"));
+const EliteMediaCeoDashboard = lazy(() => import("./pages/dashboard/EliteMediaCeoDashboard"));
 const Monetization = lazy(() => import("./pages/Monetization"));
 const ChatB2KConcierge = lazy(() => import("@/components/ChatB2KConcierge").then((module) => ({ default: module.ChatB2KConcierge })));
 
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/dashboard/brand" element={<ProtectedRoute requireRole="brand"><BrandDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/admin" element={<ProtectedRoute requireRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/elite-media" element={<ProtectedRoute><Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading your Elite Media workspace…</div>}><EliteMediaDashboard /></Suspense></ProtectedRoute>} />
+            <Route path="/dashboard/elite-media/ceo" element={<ProtectedRoute requireRole="admin"><Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading Elite Media CEO controls…</div>}><EliteMediaCeoDashboard /></Suspense></ProtectedRoute>} />
             <Route path="/campaigns/new" element={<ProtectedRoute requireRole="brand"><NewCampaign /></ProtectedRoute>} />
             <Route path="/campaigns/:id/matches" element={<ProtectedRoute requireRole="brand"><CampaignMatches /></ProtectedRoute>} />
 
