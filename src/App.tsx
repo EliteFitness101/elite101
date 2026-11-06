@@ -82,7 +82,7 @@ const App = () => (
             <Route path="/dashboard/brand" element={<ProtectedRoute requireRole="brand"><BrandDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/admin" element={<ProtectedRoute requireRole="admin"><AdminDashboard /></ProtectedRoute>} />
             <Route path="/dashboard/elite-media" element={<ProtectedRoute><Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading your Elite Media workspace…</div>}><EliteMediaDashboard /></Suspense></ProtectedRoute>} />
-            <Route path="/dashboard/elite-media/ceo" element={<ProtectedRoute requireRole="admin"><Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading Elite Media CEO controls…</div>}><EliteMediaCeoDashboard /></Suspense></ProtectedRoute>} /> />
+            <Route path="/dashboard/elite-media/ceo" element={<ProtectedRoute requireRole="admin"><Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading Elite Media CEO controls…</div>}><EliteMediaCeoDashboard /></Suspense></ProtectedRoute>} />
             <Route path="/campaigns/new" element={<ProtectedRoute requireRole="brand"><NewCampaign /></ProtectedRoute>} />
             <Route path="/campaigns/:id/matches" element={<ProtectedRoute requireRole="brand"><CampaignMatches /></ProtectedRoute>} />
 
