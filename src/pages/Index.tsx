@@ -228,7 +228,6 @@ const Index = () => {
             </article>
           ))}
         </EditorialCarousel>
-        </div>
       </section>
 
       {/* Categories */}
@@ -251,7 +250,6 @@ const Index = () => {
             </article>
           ))}
         </EditorialCarousel>
-        </div>
       </section>
 
       {/* Why */}
