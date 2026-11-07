@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Menu, X } from "lucide-react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type NavbarProps = { variant?: "default" | "elite-media"; brandTo?: string };
 
 export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
   const { user, roles, signOut } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const dashboardPath = roles.includes("admin")
     ? "/dashboard/admin"
@@ -53,13 +55,16 @@ export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
             <Link to="/questionnaire" className="text-sm text-amber-200 hover:text-white transition">Get started</Link>
           </nav>
         ) : (
-          <nav className="hidden md:flex items-center gap-4">
-            <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Explore Elite Media</Link>
-            <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">Marketplace</Link>
+          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-5">
+            <Link to="/marketplace" className="text-sm text-muted-foreground hover:text-foreground transition">Discover</Link>
+            <Link to="/auth?role=model" className="text-sm text-muted-foreground hover:text-foreground transition">For Creators</Link>
+            <Link to="/auth?role=brand" className="text-sm text-muted-foreground hover:text-foreground transition">For Brands</Link>
+            <Link to="/explore" className="text-sm text-amber-200 hover:text-foreground transition">Elite Media</Link>
             <a href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition">How it works</a>
           </nav>
         )}
         <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
           {user ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => void openDashboard()}>
@@ -83,8 +88,39 @@ export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
               </Button>
             </>
           )}
+          </div>
+          <Button type="button" variant="outline" size="icon" className="md:hidden border-white/20" aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileOpen} aria-controls="elite-mobile-navigation" onClick={() => setMobileOpen((open) => !open)}>
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
       </div>
+
+      {mobileOpen && (
+        <nav id="elite-mobile-navigation" aria-label="Mobile navigation" className="md:hidden border-t border-gold/15 bg-black/95 px-4 py-4 shadow-2xl">
+          <div className="grid gap-1">
+            {(variant === "elite-media" ? [
+              { label: "Offers", to: "/monetization#offers" }, { label: "Workflow", to: "/monetization#how-it-works" }, { label: "FAQs", to: "/monetization#faq" }, { label: "Get started", to: "/questionnaire" },
+            ] : [
+              { label: "Discover", to: "/marketplace" }, { label: "For Creators", to: "/auth?role=model" }, { label: "For Brands", to: "/auth?role=brand" }, { label: "Elite Media", to: "/explore" }, { label: "How it works", to: "/#how" },
+            ]).map((item) => (
+              <Link key={item.label} to={item.to} onClick={() => setMobileOpen(false)} className="rounded-xl px-3 py-3 text-sm text-white/85 hover:bg-white/10 hover:text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">{item.label}</Link>
+            ))}
+            <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/10 pt-3">
+              {user ? (
+                <>
+                  <Button variant="outline" onClick={() => { setMobileOpen(false); void openDashboard(); }}>Dashboard</Button>
+                  <Button variant="ghost" onClick={() => { setMobileOpen(false); void signOut().then(() => navigate("/")); }}>Sign out</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => { setMobileOpen(false); navigate("/auth"); }}>Sign in</Button>
+                  <Button className="bg-gold text-primary-foreground" onClick={() => { setMobileOpen(false); navigate(variant === "elite-media" ? "/questionnaire" : "/auth?role=model"); }}>Get started</Button>
+                </>
+              )}
+            </div>
+          </div>
+        </nav>
+      )}
 
       {variant !== "elite-media" && (
       <div className="border-t border-gold/10">

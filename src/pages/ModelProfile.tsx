@@ -40,14 +40,28 @@ const ModelProfile = () => {
     <div className="min-h-screen">
       <Navbar />
       <div className="container py-10 grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-3">
-          {photos[0] && <img src={photos[0]} alt={model.full_name} className="w-full rounded-3xl object-cover aspect-[4/5]" />}
-          {photos.length > 1 && (
-            <div className="grid grid-cols-3 gap-2">
-              {photos.slice(1).map((u, i) => <img key={i} src={u} className="aspect-square object-cover rounded-xl" alt="" />)}
+        <section className="md:col-span-2 min-w-0 space-y-3" aria-label="Talent portfolio">
+          {photos.length > 0 ? (
+            <>
+              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-3 [scrollbar-width:thin] [scrollbar-color:rgba(200,169,106,.45)_transparent]" role="region" aria-label="Swipe through portfolio photos" tabIndex={0}>
+                {photos.map((url, index) => (
+                  <figure key={url} className="w-[82vw] max-w-[620px] shrink-0 snap-center overflow-hidden rounded-3xl border border-gold/15 bg-black/30">
+                    <img src={url} alt={index === 0 ? `${model.full_name} portfolio` : `${model.full_name} portfolio image ${index + 1}`} className="aspect-[4/5] w-full object-cover" loading={index === 0 ? "eager" : "lazy"} />
+                    <figcaption className="flex items-center justify-between px-4 py-3 text-xs text-muted-foreground">
+                      <span>Portfolio image {index + 1}</span>
+                      <span className="tabular-nums">{index + 1} / {photos.length}</span>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground">Swipe to explore the portfolio.</p>
+            </>
+          ) : (
+            <div className="glass-strong grid min-h-[320px] place-items-center rounded-3xl border border-gold/15 p-8 text-center">
+              <div><div className="font-display text-2xl text-gradient-gold">Portfolio</div><p className="mt-2 text-sm text-muted-foreground">Portfolio photos will appear here when available.</p></div>
             </div>
           )}
-        </div>
+        </section>
         <div className="space-y-4">
           <div>
             <h1 className="font-display text-4xl">{model.full_name}</h1>
