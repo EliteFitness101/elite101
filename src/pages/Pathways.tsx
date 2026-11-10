@@ -15,9 +15,9 @@ const pathways: Record<string, {
 }> = {
   bigo: {
     eyebrow: "LIVE CREATOR PATHWAY", title: "Take your presence live.", accent: "BIGO Live",
-    description: "Explore live-streaming as a creator. Build your profile first, understand platform requirements, and use BIGO's official service for account access and live-streaming actions.",
-    icon: Radio, benefits: ["Creator profile and interest capture", "A clear next step into the official BIGO platform", "No promise of audience size, gifts, or income"],
-    intent: "start-earning", primary: "Build my creator profile",
+    description: "Join Elite NG as a BIGO broadcaster in one step. Open the official agency invitation first; if you are new to BIGO, install the app, create or sign in to your account, then return to accept the invitation. Complete your Elite NG profile afterwards.",
+    icon: Radio, benefits: ["Tap the agency invitation — no long form first", "New to BIGO? Install the app and create your account", "Accept the agency invitation, then complete a short Elite NG profile"],
+    intent: "start-earning", primary: "Join BIGO Agency",
   },
   "start-earning": {
     eyebrow: "CREATOR OPPORTUNITIES", title: "Turn your skills into opportunities.", accent: "On your terms.",
@@ -74,11 +74,11 @@ const Pathways = () => {
             <p className="mt-6 max-w-xl text-base leading-7 text-white/70 sm:text-lg">{item.description}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="h-12 rounded-full bg-gold px-7 text-base text-black hover:bg-amber-300">
-                <Link to={`/auth?role=model&intent=${encodeURIComponent(item.intent)}`}>{item.primary}<ArrowRight className="ml-2 h-4 w-4" /></Link>
+                {key === "bigo" ? <a href="https://slink.bigovideo.tv/dpQ6ls?new_source=5" target="_blank" rel="noreferrer">{item.primary}<ArrowRight className="ml-2 h-4 w-4" /></a> : <Link to={`/auth?role=model&intent=${encodeURIComponent(item.intent)}`}>{item.primary}<ArrowRight className="ml-2 h-4 w-4" /></Link>}
               </Button>
               {key === "bigo" ? (
                 <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/20 bg-white/[0.04] px-7 text-white hover:bg-white/10">
-                  <a href="https://www.bigo.tv/" target="_blank" rel="noreferrer">Open official BIGO <ArrowRight className="ml-2 h-4 w-4" /></a>
+                  <a href="https://slink.bigovideo.tv/dpQ6ls?new_source=5" target="_blank" rel="noreferrer">Open agency invitation <ArrowRight className="ml-2 h-4 w-4" /></a>
                 </Button>
               ) : (
                 <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/20 bg-white/[0.04] px-7 text-white hover:bg-white/10">
@@ -129,8 +129,8 @@ const Pathways = () => {
         </div>
         {item.disclaimer && <div role="note" className="mt-6 rounded-2xl border border-amber-200/20 bg-amber-100/[0.045] p-5 text-sm leading-6 text-white/70"><strong className="text-amber-200">Important:</strong> {item.disclaimer}</div>}
         <div className="mt-10 flex flex-col items-start justify-between gap-5 rounded-3xl border border-gold/20 bg-gradient-to-r from-gold/[0.10] via-white/[0.035] to-transparent p-6 backdrop-blur-xl sm:flex-row sm:items-center sm:p-8">
-          <div><h2 className="font-display text-3xl text-white sm:text-4xl">Ready to take the next step?</h2><p className="mt-2 text-sm text-white/60">Start with the profile or enquiry. You can review the details before committing.</p></div>
-          <Button asChild size="lg" className="shrink-0 rounded-full bg-gold px-7 text-black hover:bg-amber-300"><Link to={`/auth?role=model&intent=${encodeURIComponent(item.intent)}`}>Continue securely <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <div><h2 className="font-display text-3xl text-white sm:text-4xl">{key === "bigo" ? "Ready to join the agency?" : "Ready to take the next step?"}</h2><p className="mt-2 text-sm text-white/60">{key === "bigo" ? "No Elite NG long form before BIGO. Accept the invitation first; we will guide your profile setup afterwards." : "Start with the profile or enquiry. You can review the details before committing."}</p></div>
+          <Button asChild size="lg" className="shrink-0 rounded-full bg-gold px-7 text-black hover:bg-amber-300">{key === "bigo" ? <a href="https://slink.bigovideo.tv/dpQ6ls?new_source=5" target="_blank" rel="noreferrer">Join BIGO Agency <ArrowRight className="ml-2 h-4 w-4" /></a> : <Link to={`/auth?role=model&intent=${encodeURIComponent(item.intent)}`}>Continue securely <ArrowRight className="ml-2 h-4 w-4" /></Link>}</Button>
         </div>
       </section>
       <footer className="border-t border-white/10 py-7 text-center text-xs text-white/45">ELITE NG · ResoFlex™ powered talent marketplace · <Link className="underline underline-offset-4 hover:text-gold" to="/marketplace">Marketplace</Link> · <a className="underline underline-offset-4 hover:text-gold" href="https://shop.resofit.fit/" target="_blank" rel="noreferrer">ResoFit Shop</a></footer>
