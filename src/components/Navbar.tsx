@@ -89,7 +89,7 @@ export const Navbar = ({ variant = "default", brandTo }: NavbarProps) => {
       {variant !== "elite-media" && (
       <div className="border-t border-gold/10">
         <nav aria-label="Quick paths" className="container flex gap-2 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <Link to="/pathways?intent=bigo" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Start BIGO Live</Link>
+          <a href="https://slink.bigovideo.tv/dpQ6ls?new_source=5" target="_blank" rel="noreferrer" className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/20">Join BIGO Agency ↗</a>
           <Link to="/pathways?intent=start-earning" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Start Earning</Link>
           <Link to="/pathways?intent=earn-from-home" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Earn From Home</Link>
           <Link to="/pathways?intent=work-from-home" className="shrink-0 rounded-full border border-white/15 px-3 py-1.5 text-xs hover:border-gold/50 hover:text-gold">Work From Home</Link>
