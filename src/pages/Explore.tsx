@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 const pathways = [
   { tag: "CREATE", title: "Creator media studio", copy: "Turn approved footage into a clear, repeatable short-form workflow.", video: "/Creating_advertisement_for_creators_20261017004820.mp4", fallback: "/Creator_filming_travel_content_20261017005213.mp4", icon: Film, cta: "Explore media", to: "/monetization" },
   { tag: "CONNECT", title: "Talent & brand discovery", copy: "Find creator profiles, campaign opportunities, and the next useful connection.", video: "/Creator_applying_for_streaming_role_20261017010020.mp4", fallback: "/Creator_applying_for_streaming_role_20261017010020.mp4", icon: Globe2, cta: "Browse talent", to: "/marketplace" },
-  { tag: "GO LIVE", title: "BIGO host pathway", copy: "Explore the host application path and the information needed to get started.", video: "/Livestream_host_recruitment_video_20261017005535.mp4", fallback: "/Creator_filming_travel_content_20261017005213.mp4", icon: RadioTower, cta: "Explore live", to: "/questionnaire" },
+  { tag: "GO LIVE", title: "BIGO host pathway", copy: "Join the Elite NG agency directly. New to BIGO? Use the invite to install the app and create your account before accepting.", video: "/Livestream_host_recruitment_video_20261017005535.mp4", fallback: "/Creator_filming_travel_content_20261017005213.mp4", icon: RadioTower, cta: "Join BIGO Agency", to: "/pathways?intent=bigo" },
   { tag: "OPERATE", title: "Agency workspace", copy: "Organize creator assets, requests, publishing handoffs, and team workflows.", video: "/Creators_preparing_for_professional_content_20261017003431.mp4", fallback: "/Creator_filming_travel_content_20261017005213.mp4", icon: MonitorPlay, cta: "View plans", to: "/monetization" },
 ];
 
@@ -136,7 +136,7 @@ export default function Explore() {
   const [goal, setGoal] = useState("media");
   const selectedCountry = countries.find((item) => item.code === country) ?? countries[countries.length - 1];
   const selectedRail = rails.find((item) => item.value === rail) ?? rails[0];
-  const recommendedPath = useMemo(() => goal === "talent" ? "/marketplace" : goal === "live" ? "/questionnaire" : goal === "agency" ? "/monetization" : "/monetization", [goal]);
+  const recommendedPath = useMemo(() => goal === "talent" ? "/marketplace" : goal === "live" ? "/pathways?intent=bigo" : goal === "agency" ? "/monetization" : "/monetization", [goal]);
 
   const updateCountry = (code: string) => {
     setCountryTouched(true);
