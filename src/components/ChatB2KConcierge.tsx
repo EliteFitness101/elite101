@@ -10,7 +10,7 @@ const prompts = [
   { label: "Start onboarding", text: "Guide me through onboarding.", to: "/explore#start" },
   { label: "My dashboard", text: "How do I open my account dashboard?", to: "/auth" },
   { label: "Creator & media", text: "Explain creator and media tools available to me.", to: "/monetization" },
-  { label: "BIGO host pathway", text: "Guide me through the BIGO host pathway.", to: "/questionnaire" },
+  { label: "BIGO onboarding help", text: "Help me join the Elite NG BIGO agency. I may be new to BIGO and need the shortest steps.", to: "/pathways?intent=bigo" },
   { label: "Find talent", text: "Help me find talent.", to: "/marketplace" },
 ];
 
@@ -69,7 +69,9 @@ export function ChatB2KConcierge() {
                 </div>
                 <button onClick={() => setOpen(false)} aria-label="Close assistant" className="rounded-full p-2 text-white/65 hover:bg-white/10"><X className="h-4 w-4" /></button>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/25 p-1">
+              <a href="https://slink.bigovideo.tv/dpQ6ls?new_source=5" target="_blank" rel="noreferrer" className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-200 px-4 py-3 text-sm font-bold text-black transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Join BIGO Agency <ArrowRight className="h-4 w-4" /></a>
+              <p className="mt-2 text-[11px] leading-4 text-white/55">New to BIGO? The invitation should take you to the app install or account flow. Return here after accepting for Elite NG onboarding.</p>
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/25 p-1>
                 <button onClick={() => setPersona("coach-b2k")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "coach-b2k" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Coach B2K · Firm & caring</button>
                 <button onClick={() => setPersona("mavia")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "mavia" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Mavia · HR & Concierge</button>
               </div>
