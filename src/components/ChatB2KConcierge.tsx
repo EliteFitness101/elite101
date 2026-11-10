@@ -71,7 +71,7 @@ export function ChatB2KConcierge() {
               </div>
               <a href="https://slink.bigovideo.tv/dpQ6ls?new_source=5" target="_blank" rel="noreferrer" className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-200 px-4 py-3 text-sm font-bold text-black transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Join BIGO Agency <ArrowRight className="h-4 w-4" /></a>
               <p className="mt-2 text-[11px] leading-4 text-white/55">New to BIGO? The invitation should take you to the app install or account flow. Return here after accepting for Elite NG onboarding.</p>
-              <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/25 p-1>
+              <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-black/25 p-1">
                 <button onClick={() => setPersona("coach-b2k")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "coach-b2k" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Coach B2K · Firm & caring</button>
                 <button onClick={() => setPersona("mavia")} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${persona === "mavia" ? "bg-amber-200 text-black" : "text-white/65 hover:bg-white/5"}`}>Mavia · HR & Concierge</button>
               </div>
