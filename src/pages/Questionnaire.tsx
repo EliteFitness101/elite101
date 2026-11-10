@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 type SubmissionState = "idle" | "submitting" | "success" | "error";
+
+const BIGO_AGENCY_INVITE_URL = "https://slink.bigovideo.tv/dpQ6ls?new_source=5";
 
 const fieldClass =
   "mt-2 w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-amber-300/70 focus:ring-2 focus:ring-amber-300/15";
@@ -12,6 +14,15 @@ const Questionnaire = () => {
   const [submission, setSubmission] = useState<SubmissionState>("idle");
   const [message, setMessage] = useState("");
   const [reference, setReference] = useState("");
+  const [redirectToAgency, setRedirectToAgency] = useState(false);
+
+  useEffect(() => {
+    if (!redirectToAgency) return;
+    const redirectTimer = window.setTimeout(() => {
+      window.location.assign(BIGO_AGENCY_INVITE_URL);
+    }, 1800);
+    return () => window.clearTimeout(redirectTimer);
+  }, [redirectToAgency]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,7 +69,8 @@ const Questionnaire = () => {
       }
       setSubmission("success");
       setReference(data.reference || "");
-      setMessage(data.message || "Your application has been received.");
+      setMessage("Your application has been received. We are opening the official BIGO agency invitation so you can accept it.");
+      setRedirectToAgency(true);
       formElement.reset();
     } catch (error) {
       console.error("Elite NG application submission failed", error);
@@ -84,6 +96,18 @@ const Questionnaire = () => {
           <div role={submission === "error" ? "alert" : "status"} className={`mt-6 rounded-xl border p-4 text-sm ${submission === "error" ? "border-red-400/30 bg-red-400/10 text-red-100" : "border-amber-300/30 bg-amber-300/10 text-amber-50"}`}>
             <p>{message}</p>
             {reference && <p className="mt-2 font-semibold">Reference: {reference}</p>}
+            {submission === "success" && (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs text-white/70">BIGO agency invitation · Tap to accept your invitation and continue with BIGO.</p>
+                <a
+                  href={BIGO_AGENCY_INVITE_URL}
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-bold text-black transition hover:bg-amber-200"
+                >
+                  Join BIGO Agency
+                </a>
+                <p className="text-xs text-white/55">If you are not redirected automatically, use the button above. Agency contracting is confirmed by BIGO, not by this application form.</p>
+              </div>
+            )}
           </div>
         )}
 
