@@ -335,7 +335,7 @@ const ModelDashboard = () => {
                 <label className="text-sm space-y-1">Your Buffer channel
                   <select className="w-full rounded-xl border border-border bg-background p-3" value={selectedClientChannel} onChange={(e) => setSelectedClientChannel(e.target.value)}>
                     <option value="">Select a channel</option>
-                    {(clientWorkspace?.channels || []).map((channel: any) => <option key={channel.channel_id} value={channel.channel_id}>{channel.name} · {channel.platform} · {channel.organization_id}</option>)}
+                    {(clientWorkspace?.channels || []).map((channel: any) => <option key={channel.channel_id} value={channel.channel_id}>{channel.name} · {channel.platform} · {(clientWorkspace?.organizations || []).find((org: any) => org.organization_id === channel.organization_id)?.name || channel.organization_id}</option>)}
                   </select>
                 </label>
                 <label className="text-sm space-y-1">BIGO / Highlights host ID
