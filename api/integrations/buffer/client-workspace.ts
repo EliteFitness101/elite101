@@ -63,11 +63,11 @@ export default async function handler(req: any, res: any) {
         owner_user_id: owner.id, connection_id: channel.connection_id, organization_id: channel.organization_id,
         channel_id: channel.channel_id, client_key: model.id, host_id: hostId,
         expected_handle: String(channel.handle || "").replace(/^@/, ""),
-        assignment_status: "verified",
-        owner_evidence: { source: "owner_scoped_buffer_oauth", owner_user_id: owner.id, model_id: model.id, host_id_attested_by_owner: true, attested_at: new Date().toISOString() },
-        verified_by: owner.id, verified_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        assignment_status: "pending",
+        owner_evidence: { source: "owner_scoped_buffer_oauth", owner_user_id: owner.id, model_id: model.id, host_id_attested_by_owner: true, attested_at: new Date().toISOString(), review_required: true },
+        updated_at: new Date().toISOString(),
       }], "resolution=merge-duplicates,return=minimal");
-      return res.status(200).json({ ok: true, mapped: true, channel_id: channelId, organization_id: channel.organization_id });
+      return res.status(202).json({ ok: true, mapped: false, assignment_status: "pending", channel_id: channelId, organization_id: channel.organization_id, message: "Mapping submitted. Highlights publishing unlocks after Elite verifies the host-to-channel relationship." });
     }
     if (action === "authorize_asset") {
       const assetId = key(body.asset_id, "Highlights asset ID", 80);
