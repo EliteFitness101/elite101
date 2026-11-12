@@ -19,9 +19,9 @@ type Asset = { id: string; brand: string | null; campaign: string | null; asset_
 type Assignment = { id: string; channel_id: string; client_key: string; host_id: string | null; expected_handle: string; assignment_status: string; verified_at: string | null };
 type Authorization = { id: string; asset_registry_id: string; client_key: string; host_id: string | null; channel_id: string; rights_holder: string; authorization_status: string; expires_at: string | null };
 type Publication = { id: string; channel_id: string; platform: string; buffer_post_id: string | null; status: string; scheduled_at: string | null; published_at: string | null; error_message: string | null; client_key: string | null; host_id: string | null; target_handle: string | null; created_at: string };
-type MediaIntake = { id: string; owner_user_id: string; model_id: string; source_url: string; source_host: string; rights_holder: string | null; rights_evidence_url: string | null; status: string; asset_registry_id: string | null; review_note: string | null; created_at: string };\ntype Registry = { connections: Connection[]; organizations: Organization[]; channels: Channel[]; assignments: Assignment[]; authorizations: Authorization[]; publications: Publication[]; assets: Asset[]; media_intake: MediaIntake[] };
+type ClientMapping = { id: string; owner_user_id: string; connection_id: string; organization_id: string; channel_id: string; client_key: string; host_id: string | null; expected_handle: string; owner_evidence: Record<string, any>; created_at: string };\ntype MediaIntake = { id: string; owner_user_id: string; model_id: string; source_url: string; source_host: string; rights_holder: string | null; rights_evidence_url: string | null; status: string; asset_registry_id: string | null; review_note: string | null; created_at: string };\ntype Registry = { connections: Connection[]; organizations: Organization[]; channels: Channel[]; assignments: Assignment[]; authorizations: Authorization[]; publications: Publication[]; assets: Asset[]; media_intake: MediaIntake[]; pending_client_mappings: ClientMapping[] };
 
-const empty: Registry = { connections: [], organizations: [], channels: [], assignments: [], authorizations: [], publications: [], assets: [], media_intake: [] };
+const empty: Registry = { connections: [], organizations: [], channels: [], assignments: [], authorizations: [], publications: [], assets: [], media_intake: [], pending_client_mappings: [] };
 const dateLabel = (value?: string | null) => value ? new Date(value).toLocaleString() : "Not yet verified";
 const statusTone = (value: string) => value === "connected" || value === "verified" || value === "approved" || value === "scheduled" || value === "sent" ? "default" : "secondary";
 
@@ -69,7 +69,7 @@ export default function EliteMediaCeoDashboard() {
         connections: data.connections || [], organizations: data.organizations || [],
         channels: data.channels || [], assignments: data.assignments || [],
         authorizations: data.authorizations || [], publications: data.publications || [],
-        assets: data.assets || [], media_intake: data.media_intake || [],
+        assets: data.assets || [], media_intake: data.media_intake || [], pending_client_mappings: data.pending_client_mappings || [],
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load publishing control center.");
@@ -159,6 +159,17 @@ export default function EliteMediaCeoDashboard() {
       toast.success("Live queue publishing enabled for this verified client/channel pair.");
       await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not enable this channel."); }
+    finally { setBusy(""); }
+  };
+
+  const verifyClientMapping = async (mapping: ClientMapping) => {
+    if (!window.confirm(`Verify that host ${mapping.host_id || "(missing)"} is authorized to publish through ${mapping.expected_handle}?`)) return;
+    setBusy(`mapping:${mapping.id}`);
+    try {
+      await api("/api/integrations/buffer/registry", "POST", { action: "verify_client_mapping", assignment_id: mapping.id, owner_user_id: mapping.owner_user_id, client_key: mapping.client_key, confirm_host: true });
+      toast.success("Client host-to-channel mapping verified.");
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Mapping verification failed."); }
     finally { setBusy(""); }
   };
 
@@ -310,6 +321,19 @@ export default function EliteMediaCeoDashboard() {
             </CardContent>
           </Card>
         </section>
+
+        <Card className="border-gold/20 bg-white/[0.035] text-white">
+          <CardHeader><CardTitle className="font-display text-2xl">Client host-to-channel mapping approvals</CardTitle><CardDescription className="text-white/50">Client-submitted mappings stay pending until an administrator checks the host evidence and confirms the Buffer channel identity.</CardDescription></CardHeader>
+          <CardContent className="space-y-3">
+            {registry.pending_client_mappings.map((mapping) => (
+              <div key={mapping.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 p-3">
+                <div className="min-w-0"><p className="text-sm font-medium">{mapping.expected_handle} · {mapping.channel_id}</p><p className="mt-1 text-xs text-white/40">Host {mapping.host_id || "not supplied"} · client {mapping.client_key.slice(0, 8)} · owner {mapping.owner_user_id.slice(0, 8)}</p><a href={String(mapping.owner_evidence?.host_evidence_url || "")} target="_blank" rel="noreferrer" className="text-xs text-gold underline">Review host identity evidence</a></div>
+                <Button size="sm" disabled={busy === `mapping:${mapping.id}`} onClick={() => void verifyClientMapping(mapping)} className="bg-gold text-black hover:bg-gold/90">Verify mapping</Button>
+              </div>
+            ))}
+            {registry.pending_client_mappings.length === 0 && <p className="text-sm text-white/40">No client host mappings are awaiting verification.</p>}
+          </CardContent>
+        </Card>
 
         <Card className="border-white/10 bg-white/[0.035] text-white">
           <CardHeader><CardTitle className="font-display text-2xl">Client-submitted media links</CardTitle><CardDescription className="text-white/50">Links remain pending until the source is ingested, registered and passes QA, rights, commercial and origin review. This control only links an exact source URL to an already-cleared registry asset; it does not bypass ingestion or review.</CardDescription></CardHeader>
