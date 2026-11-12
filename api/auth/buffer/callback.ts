@@ -24,11 +24,11 @@ function readCookie(req: any, name: string): string | undefined {
   return undefined;
 }
 
-function finishConnection(res: any, status: string) {
+function finishConnection(res: any, status: string, destination = "/dashboard/elite-media/ceo") {
   res.setHeader("Set-Cookie", "buffer_connections_state=; Path=/api/auth/buffer; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Referrer-Policy", "no-referrer");
-  return res.redirect(302, `/dashboard/elite-media/ceo?buffer_connection=${encodeURIComponent(status)}`);
+  return res.redirect(302, `${destination}?buffer_connection=${encodeURIComponent(status)}`);
 }
 
 export default async function handler(req: any, res: any) {
@@ -53,11 +53,24 @@ export default async function handler(req: any, res: any) {
     if (!code) return finishConnection(res, "code_missing");
     const connectionId = connectionSaved.state.split(".")[0];
     if (!/^[0-9a-f-]{36}$/i.test(connectionId)) return finishConnection(res, "state_invalid");
+    let destination = "/dashboard/elite-media/ceo";
     try {
+      const { url, serviceRoleKey } = supabaseConfig();
+      const ownerResponse = await fetch(`${url}/rest/v1/buffer_oauth_connections?id=eq.${connectionId}&select=owner_user_id&limit=1`, {
+        headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
+      });
+      const ownerRows = ownerResponse.ok ? await ownerResponse.json() as Array<{ owner_user_id: string }> : [];
+      if (ownerRows[0]?.owner_user_id) {
+        const roleResponse = await fetch(`${url}/rest/v1/user_roles?user_id=eq.${ownerRows[0].owner_user_id}&role=eq.model&select=user_id&limit=1`, {
+          headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
+        });
+        const modelRoles = roleResponse.ok ? await roleResponse.json() as Array<{ user_id: string }> : [];
+        if (modelRoles.length) destination = "/dashboard/model";
+      }
       await completeBufferOAuthConnection(connectionId, code, connectionSaved.verifier);
-      return finishConnection(res, "connected");
+      return finishConnection(res, "connected", destination);
     } catch {
-      return finishConnection(res, "connection_failed");
+      return finishConnection(res, "connection_failed", destination);
     }
   }
 
