@@ -46,6 +46,20 @@ export function validateRedirectUri(): string {
   return parsed.toString();
 }
 
+export async function requireUser(req: any): Promise<{ id: string; email: string }> {
+  const authorization = String(req.headers?.authorization || "");
+  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  if (!match) throw new HttpError(401, "Sign in to connect your own Buffer account.");
+  const { url, publishableKey } = supabaseConfig();
+  const userResponse = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: publishableKey, authorization: `Bearer ${match[1]}` },
+  });
+  if (!userResponse.ok) throw new HttpError(401, "The current session could not be verified.");
+  const user = await userResponse.json() as { id?: string; email?: string };
+  if (!user.id || !user.email) throw new HttpError(401, "A verified user identity is required.");
+  return { id: user.id, email: user.email.toLowerCase() };
+}
+
 export async function requireAdmin(req: any): Promise<{ id: string; email: string }> {
   const authorization = String(req.headers?.authorization || "");
   const match = authorization.match(/^Bearer\s+(.+)$/i);
