@@ -16,3 +16,7 @@ create policy model_onboarding_drafts_update_owner on public.model_onboarding_dr
   for update to authenticated using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 grant select, insert, update, delete on public.model_onboarding_drafts to authenticated;
+
+drop policy if exists model_onboarding_drafts_delete_owner on public.model_onboarding_drafts;
+create policy model_onboarding_drafts_delete_owner on public.model_onboarding_drafts
+  for delete to authenticated using ((select auth.uid()) = user_id);
