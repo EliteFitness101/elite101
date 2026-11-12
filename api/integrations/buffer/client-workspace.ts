@@ -4,7 +4,7 @@ import { HttpError, fail, requireUser, supabaseConfig } from "../../../lib/serve
 function bodyOf(req: any) { return typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {}); }
 function key(value: unknown, label: string, max = 240) {
   const result = String(value || "").trim();
-  if (!result || result.length > max || /[\\r\\n]/.test(result)) throw new HttpError(400, `A valid ${label} is required.`);
+  if (!result || result.length > max || /[\r\n]/.test(result)) throw new HttpError(400, `A valid ${label} is required.`);
   return result;
 }
 async function db(path: string, method = "GET", body?: unknown, prefer?: string) {
