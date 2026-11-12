@@ -50,13 +50,12 @@ export default async function handler(req: any, res: any) {
     if (caption.length > 2200) throw new HttpError(400, "Caption exceeds the 2,200-character limit.");
     if (body.confirm_publish !== true) throw new HttpError(400, "Explicit client content approval is required before adding this post to the Buffer queue.");
 
-    const [assets, channels, assignments, authorizations, captures, hostSources] = await Promise.all([
+    const [assets, channels, assignments, authorizations, captures] = await Promise.all([
       db(`content_asset_registry?id=eq.${encodeURIComponent(assetId)}&select=id,asset_type,mime_type,source_url,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,publish_blockers&limit=1`),
       db(`buffer_channels?owner_user_id=eq.${owner.id}&channel_id=eq.${encodeURIComponent(channelId)}&select=channel_id,organization_id,connection_id,platform,name,handle,active,is_verified,publishing_enabled,provider_disconnected,provider_locked&limit=1`),
       db(`buffer_channel_assignments?owner_user_id=eq.${owner.id}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${model.id}&assignment_status=eq.verified&select=id,host_id,expected_handle,organization_id&limit=1`),
       db(`buffer_asset_authorizations?owner_user_id=eq.${owner.id}&asset_registry_id=eq.${encodeURIComponent(assetId)}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${model.id}&authorization_status=eq.approved&select=id,rights_holder,permission_scope,evidence,expires_at,host_id,organization_id&limit=1`),
       db(`resofit_live_highlights?content_asset_id=eq.${encodeURIComponent(assetId)}&select=id,host_id&limit=10`),
-      db("bigo_sources?select=bigo_id,metadata,active,capture_enabled&limit=1000"),
     ]);
     if (!assets?.length) throw new HttpError(404, "Asset was not found in the approved content registry.");
     const asset = assets[0];
@@ -75,7 +74,8 @@ export default async function handler(req: any, res: any) {
     if (assignment.organization_id !== channel.organization_id || authorization.organization_id !== channel.organization_id) throw new HttpError(409, "Organization metadata does not match the verified channel assignment.");
     if (authorization.expires_at && new Date(authorization.expires_at).getTime() <= Date.now()) throw new HttpError(409, "Media rights authorization has expired.");
     if (!Array.isArray(authorization.permission_scope) || !authorization.permission_scope.includes("organic_social")) throw new HttpError(409, "Media authorization does not include organic social publishing.");
-    const hostSource = (hostSources || []).find((row: any) => row.bigo_id === assignment.host_id);
+    const hostSources = await db(`bigo_sources?bigo_id=eq.${encodeURIComponent(assignment.host_id)}&select=bigo_id,metadata,active,capture_enabled&limit=1`);
+    const hostSource = hostSources?.[0];
     if (!captures?.some((capture: any) => capture.host_id === assignment.host_id) || authorization.host_id !== assignment.host_id || !hostMatchesAsset(assignment.host_id, asset.source_url)) throw new HttpError(403, "The captured asset provenance and authorization must match your verified client/channel host.");
     if (!hostSource?.active || !hostSource.capture_enabled || hostSource.metadata?.resofit_registry_sync?.allowlist_member !== true) throw new HttpError(403, "This BIGO host is not active in the verified-host publication allowlist.");
     if (channel.handle?.replace(/^@/, "").toLowerCase() !== assignment.expected_handle?.replace(/^@/, "").toLowerCase()) throw new HttpError(409, "Channel handle no longer matches your verified assignment.");
