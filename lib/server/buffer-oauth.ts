@@ -50,7 +50,7 @@ export async function requireUser(req: any): Promise<{ id: string; email: string
   const authorization = String(req.headers?.authorization || "");
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) throw new HttpError(401, "Sign in to connect your own Buffer account.");
-  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\\/$/, "");
+  const url = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").replace(/\/$/, "");
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
   if (!url || !publishableKey) throw new HttpError(503, "Supabase authentication configuration is incomplete.");
   const userResponse = await fetch(`${url}/auth/v1/user`, {
