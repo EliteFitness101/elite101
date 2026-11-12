@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { HttpError, requireAdmin, supabaseConfig } from "../../../lib/server/buffer-oauth.js";
 import { bufferGraphQL, getConnection, getFreshBufferToken } from "../../../lib/server/buffer-multi.js";
+import { hostMatchesAsset } from "../../../lib/server/buffer-provenance.js";
 
 function fail(res: any, error: unknown) {
   const status = error instanceof HttpError ? error.status : 500;
@@ -41,11 +42,13 @@ export default async function handler(req: any, res: any) {
     const clientKey = required(body.client_key, "Client identity");
     const caption = required(body.caption, "Caption");
     if (caption.length > 2200) throw new HttpError(400, "Caption exceeds the 2,200-character limit.");
-    const [assets, channels, assignments, authorizations] = await Promise.all([
-      db(`content_asset_registry?id=eq.${encodeURIComponent(assetId)}&select=id,asset_type,mime_type,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,publish_blockers,rights_evidence,content_origin&limit=1`),
+    const [assets, channels, assignments, authorizations, captures, hostSources] = await Promise.all([
+      db(`content_asset_registry?id=eq.${encodeURIComponent(assetId)}&select=id,asset_type,mime_type,source_url,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,publish_blockers,rights_evidence,content_origin&limit=1`),
       db(`buffer_channels?owner_user_id=eq.${admin.id}&channel_id=eq.${encodeURIComponent(channelId)}&select=channel_id,organization_id,connection_id,platform,name,handle,active,is_verified,publishing_enabled,provider_disconnected,provider_locked&limit=1`),
       db(`buffer_channel_assignments?owner_user_id=eq.${admin.id}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${encodeURIComponent(clientKey)}&assignment_status=eq.verified&select=id,host_id,expected_handle&limit=1`),
       db(`buffer_asset_authorizations?owner_user_id=eq.${admin.id}&asset_registry_id=eq.${encodeURIComponent(assetId)}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${encodeURIComponent(clientKey)}&authorization_status=eq.approved&select=id,rights_holder,permission_scope,evidence,expires_at,host_id&limit=1`),
+      db(`resofit_live_highlights?content_asset_id=eq.${encodeURIComponent(assetId)}&select=id,host_id&limit=20`),
+      db(`bigo_sources?bigo_id=eq.${encodeURIComponent(assignments?.[0]?.host_id || "")}&select=bigo_id,metadata,active,capture_enabled&limit=1`),
     ]);
     if (!assets?.length) throw new HttpError(404, "Asset was not found in the approved content registry.");
     const asset = assets[0];
@@ -62,10 +65,18 @@ export default async function handler(req: any, res: any) {
     }
     if (!assignments?.length || !authorizations?.length) throw new HttpError(409, "Client/host ownership and asset rights authorization are required for this channel.");
     const authorization = authorizations[0];
+    const assignment = assignments[0];
+    const sourceRegistry = hostSources?.[0];
+    if (authorization.host_id !== assignment.host_id || !hostMatchesAsset(assignment.host_id, asset.source_url) || !captures?.some((capture: any) => capture.host_id === assignment.host_id)) {
+      throw new HttpError(409, "BIGO asset provenance does not match the verified host-to-channel assignment.");
+    }
+    if (!sourceRegistry?.active || !sourceRegistry.capture_enabled || sourceRegistry.metadata?.resofit_registry_sync?.allowlist_member !== true) {
+      throw new HttpError(409, "BIGO host is not active in the verified-host publication allowlist.");
+    }
     if (authorization.expires_at && new Date(authorization.expires_at).getTime() <= Date.now()) {
       throw new HttpError(409, "Asset rights authorization has expired.");
     }
-    if (channel.handle?.replace(/^@/, "").toLowerCase() !== assignments[0].expected_handle?.replace(/^@/, "").toLowerCase()) {
+    if (channel.handle?.replace(/^@/, "").toLowerCase() !== assignment.expected_handle?.replace(/^@/, "").toLowerCase()) {
       throw new HttpError(409, "Channel handle no longer matches the verified client/host assignment.");
     }
     const platformField: Record<string, string> = { tiktok: "tiktok_eligible", youtube: "youtube_eligible", google_business: "google_business_eligible" };
@@ -97,7 +108,7 @@ export default async function handler(req: any, res: any) {
         content_id: null, channel_id: channelId, platform: channel.platform,
         idempotency_key: idempotencyKey, status: "dispatching",
         connection_id: connection.id, organization_id: channel.organization_id,
-        asset_registry_id: assetId, client_key: clientKey, host_id: authorization.host_id || assignments[0].host_id,
+        asset_registry_id: assetId, client_key: clientKey, host_id: authorization.host_id,
         target_handle: channel.handle, rights_snapshot: authorization,
         qa_snapshot: { qa_status: asset.qa_status, rights_status: asset.rights_status, commercial_status: asset.commercial_status, origin_review_status: asset.origin_review_status },
         attempts: 1, updated_at: new Date().toISOString(),
