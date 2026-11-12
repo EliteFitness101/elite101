@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HttpError, requireUser } from "../../lib/server/buffer-oauth";
+import { requireUser } from "../../lib/server/buffer-oauth";
 
 describe("client-owned Buffer session authentication", () => {
   afterEach(() => {
