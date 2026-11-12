@@ -43,7 +43,7 @@ export default async function handler(req: any, res: any) {
     const caption = required(body.caption, "Caption");
     if (caption.length > 2200) throw new HttpError(400, "Caption exceeds the 2,200-character limit.");
     const [assets, channels, assignments, authorizations, captures] = await Promise.all([
-      db(`content_asset_registry?id=eq.${encodeURIComponent(assetId)}&select=id,asset_type,mime_type,source_url,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,publish_blockers,rights_evidence,content_origin&limit=1`),
+      db(`content_asset_registry?id=eq.${encodeURIComponent(assetId)}&select=id,asset_type,mime_type,source_url,source_asset_id,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,publish_blockers,rights_evidence,content_origin&limit=1`),
       db(`buffer_channels?owner_user_id=eq.${admin.id}&channel_id=eq.${encodeURIComponent(channelId)}&select=channel_id,organization_id,connection_id,platform,name,handle,active,is_verified,publishing_enabled,provider_disconnected,provider_locked&limit=1`),
       db(`buffer_channel_assignments?owner_user_id=eq.${admin.id}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${encodeURIComponent(clientKey)}&assignment_status=eq.verified&select=id,host_id,expected_handle&limit=1`),
       db(`buffer_asset_authorizations?owner_user_id=eq.${admin.id}&asset_registry_id=eq.${encodeURIComponent(assetId)}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${encodeURIComponent(clientKey)}&authorization_status=eq.approved&select=id,rights_holder,permission_scope,evidence,expires_at,host_id&limit=1`),
@@ -67,7 +67,7 @@ export default async function handler(req: any, res: any) {
     const assignment = assignments[0];
     const hostSources = await db(`bigo_sources?bigo_id=eq.${encodeURIComponent(assignment.host_id)}&select=bigo_id,metadata,active,capture_enabled&limit=1`);
     const sourceRegistry = hostSources?.[0];
-    if (authorization.host_id !== assignment.host_id || !hostMatchesAsset(assignment.host_id, asset.source_url) || !captures?.some((capture: any) => capture.host_id === assignment.host_id)) {
+    if (authorization.host_id !== assignment.host_id || !hostMatchesAsset(assignment.host_id, asset.source_url, asset.source_asset_id) || !captures?.some((capture: any) => capture.host_id === assignment.host_id)) {
       throw new HttpError(409, "BIGO asset provenance does not match the verified host-to-channel assignment.");
     }
     if (!sourceRegistry?.active || !sourceRegistry.capture_enabled || sourceRegistry.metadata?.resofit_registry_sync?.allowlist_member !== true) {
