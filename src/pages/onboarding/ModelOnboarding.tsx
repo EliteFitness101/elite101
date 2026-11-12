@@ -55,6 +55,68 @@ const ModelOnboarding = () => {
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [telegramChatId, setTelegramChatId] = useState("");
   const [telegramOptIn, setTelegramOptIn] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<"loading" | "saved" | "saving" | "error">("loading");
+
+  // Drafts are private to the authenticated owner; no form data is stored in browser localStorage.
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    (supabase as any).from("model_onboarding_drafts")
+      .select("payload,current_step")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data, error }: any) => {
+        if (!active) return;
+        if (error) {
+          console.error("Unable to restore onboarding draft:", error);
+          setDraftStatus("error");
+          setDraftHydrated(true);
+          return;
+        }
+        if (data?.payload) {
+          const p = data.payload;
+          if (p.form) setForm((current) => ({ ...current, ...p.form }));
+          if (typeof p.careerChoices === "string") setCareerChoices(p.careerChoices);
+          if (typeof p.personalGoals === "string") setPersonalGoals(p.personalGoals);
+          if (typeof p.portfolioUrl === "string") setPortfolioUrl(p.portfolioUrl);
+          if (typeof p.youtubeUrl === "string") setYoutubeUrl(p.youtubeUrl);
+          if (typeof p.facebookUrl === "string") setFacebookUrl(p.facebookUrl);
+          if (typeof p.pinterestUrl === "string") setPinterestUrl(p.pinterestUrl);
+          if (typeof p.xUrl === "string") setXUrl(p.xUrl);
+          if (typeof p.linkedinUrl === "string") setLinkedinUrl(p.linkedinUrl);
+          if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);
+          setSocialReviewConsent(p.socialReviewConsent === true);
+          setWhatsappOptIn(p.whatsappOptIn === true);
+          if (typeof p.telegramChatId === "string") setTelegramChatId(p.telegramChatId);
+          setTelegramOptIn(p.telegramOptIn === true);
+          if (Number.isInteger(data.current_step)) setStep(data.current_step);
+        }
+        setDraftStatus("saved");
+        setDraftHydrated(true);
+      });
+    return () => { active = false; };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !draftHydrated || submitting) return;
+    setDraftStatus("saving");
+    const timer = window.setTimeout(async () => {
+      const payload = {
+        form, careerChoices, personalGoals, portfolioUrl, youtubeUrl, facebookUrl,
+        pinterestUrl, xUrl, linkedinUrl, googleUrl, socialReviewConsent,
+        whatsappOptIn, telegramChatId, telegramOptIn,
+      };
+      const { error } = await (supabase as any).from("model_onboarding_drafts").upsert({
+        user_id: user.id, payload, current_step: step, updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
+      setDraftStatus(error ? "error" : "saved");
+      if (error) console.error("Onboarding draft autosave failed:", error);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [user, draftHydrated, submitting, form, step, careerChoices, personalGoals,
+      portfolioUrl, youtubeUrl, facebookUrl, pinterestUrl, xUrl, linkedinUrl,
+      googleUrl, socialReviewConsent, whatsappOptIn, telegramChatId, telegramOptIn]);
 
   // If already has model profile, go to dashboard
   useEffect(() => {
@@ -164,7 +226,7 @@ const ModelOnboarding = () => {
         console.error("ChatB2K profile enrichment unavailable:", intelligenceFailure);
         toast.warning("Your model profile is saved. ChatB2K enrichment will retry when its service is available.");
       }
-      navigate("/dashboard/model");
+      await (supabase as any).from("model_onboarding_drafts").delete().eq("user_id", user.id);\n      navigate("/dashboard/model");
     } catch (e: any) {
       toast.error(e.message || "Something went wrong");
     } finally {
@@ -179,7 +241,7 @@ const ModelOnboarding = () => {
       <div className="container max-w-2xl py-12">
         <div className="text-center mb-8">
           <div className="text-xs uppercase tracking-[0.3em] text-gold mb-2">Model Application</div>
-          <h1 className="font-display text-4xl">Tell us about you</h1>
+          <h1 className="font-display text-4xl">Tell us about you</h1>\n          <p className="text-xs text-muted-foreground mt-2" aria-live="polite">{draftStatus === "saving" ? "Saving your progress…" : draftStatus === "saved" ? "Your progress is saved securely" : draftStatus === "error" ? "Autosave unavailable — keep this page open and retry" : "Restoring your saved progress…"}</p>
           <div className="flex justify-center gap-2 mt-6">
             {[1, 2, 3, 4].map((s) => (
               <div
