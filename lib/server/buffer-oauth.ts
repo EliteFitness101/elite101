@@ -48,7 +48,7 @@ export function validateRedirectUri(): string {
 
 export async function requireUser(req: any): Promise<{ id: string; email: string }> {
   const authorization = String(req.headers?.authorization || "");
-  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) throw new HttpError(401, "Sign in to connect your own Buffer account.");
   const { url, publishableKey } = supabaseConfig();
   const userResponse = await fetch(`${url}/auth/v1/user`, {
