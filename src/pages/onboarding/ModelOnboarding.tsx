@@ -84,7 +84,14 @@ const ModelOnboarding = () => {
           if (typeof p.pinterestUrl === "string") setPinterestUrl(p.pinterestUrl);
           if (typeof p.xUrl === "string") setXUrl(p.xUrl);
           if (typeof p.linkedinUrl === "string") setLinkedinUrl(p.linkedinUrl);
-          if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);\n          if (Array.isArray(p.photoPaths)) {\n            const restored = await Promise.all(p.photoPaths.map(async (storage_path: string) => {\n              const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);\n              return signed?.signedUrl ? { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl } : null;\n            }));\n            if (active) setPhotos(restored.filter(Boolean) as { name: string; storage_path: string; preview_url: string }[]);\n          }
+          if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);
+          if (Array.isArray(p.photoPaths)) {
+            const restored = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
+              const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+              return signed?.signedUrl ? { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl } : null;
+            }));
+            if (active) setPhotos(restored.filter(Boolean) as { name: string; storage_path: string; preview_url: string }[]);
+          }
           setSocialReviewConsent(p.socialReviewConsent === true);
           setWhatsappOptIn(p.whatsappOptIn === true);
           if (typeof p.telegramChatId === "string") setTelegramChatId(p.telegramChatId);
@@ -103,7 +110,8 @@ const ModelOnboarding = () => {
     const timer = window.setTimeout(async () => {
       const payload = {
         form, careerChoices, personalGoals, portfolioUrl, youtubeUrl, facebookUrl,
-        pinterestUrl, xUrl, linkedinUrl, googleUrl, socialReviewConsent,\n        photoPaths: photos.map((photo) => photo.storage_path),
+        pinterestUrl, xUrl, linkedinUrl, googleUrl, socialReviewConsent,
+        photoPaths: photos.map((photo) => photo.storage_path),
         whatsappOptIn, telegramChatId, telegramOptIn,
       };
       const { error } = await (supabase as any).from("model_onboarding_drafts").upsert({
@@ -201,7 +209,8 @@ const ModelOnboarding = () => {
               display_name: parsed.data.full_name, email: user.email, phone: parsed.data.phone, bio: parsed.data.bio,
               instagram: parsed.data.instagram, tiktok: parsed.data.tiktok,
               career_choices: careerChoices.split(",").map((v) => v.trim()).filter(Boolean),
-              goals: personalGoals.split(/\r?\n/).map((v) => v.trim()).filter(Boolean),
+              goals: personalGoals.split(/\r?
+/).map((v) => v.trim()).filter(Boolean),
               portfolio: { portfolio_url: portfolioUrl || null },
               preferred_language: navigator.language || "en",
               preferred_channels: ["whatsapp", "telegram"],
@@ -232,7 +241,8 @@ const ModelOnboarding = () => {
         console.error("ChatB2K profile enrichment unavailable:", intelligenceFailure);
         toast.warning("Your model profile is saved. ChatB2K enrichment will retry when its service is available.");
       }
-      await (supabase as any).from("model_onboarding_drafts").delete().eq("user_id", user.id);\n      navigate("/dashboard/model");
+      await (supabase as any).from("model_onboarding_drafts").delete().eq("user_id", user.id);
+      navigate("/dashboard/model");
     } catch (e: any) {
       toast.error(e.message || "Something went wrong");
     } finally {
@@ -247,7 +257,8 @@ const ModelOnboarding = () => {
       <div className="container max-w-2xl py-12">
         <div className="text-center mb-8">
           <div className="text-xs uppercase tracking-[0.3em] text-gold mb-2">Model Application</div>
-          <h1 className="font-display text-4xl">Tell us about you</h1>\n          <p className="text-xs text-muted-foreground mt-2" aria-live="polite">{draftStatus === "saving" ? "Saving your progress…" : draftStatus === "saved" ? "Your progress is saved securely" : draftStatus === "error" ? "Autosave unavailable — keep this page open and retry" : "Restoring your saved progress…"}</p>
+          <h1 className="font-display text-4xl">Tell us about you</h1>
+          <p className="text-xs text-muted-foreground mt-2" aria-live="polite">{draftStatus === "saving" ? "Saving your progress…" : draftStatus === "saved" ? "Your progress is saved securely" : draftStatus === "error" ? "Autosave unavailable — keep this page open and retry" : "Restoring your saved progress…"}</p>
           <div className="flex justify-center gap-2 mt-6">
             {[1, 2, 3, 4].map((s) => (
               <div
