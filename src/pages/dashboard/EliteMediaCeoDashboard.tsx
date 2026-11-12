@@ -19,9 +19,9 @@ type Asset = { id: string; brand: string | null; campaign: string | null; asset_
 type Assignment = { id: string; channel_id: string; client_key: string; host_id: string | null; expected_handle: string; assignment_status: string; verified_at: string | null };
 type Authorization = { id: string; asset_registry_id: string; client_key: string; host_id: string | null; channel_id: string; rights_holder: string; authorization_status: string; expires_at: string | null };
 type Publication = { id: string; channel_id: string; platform: string; buffer_post_id: string | null; status: string; scheduled_at: string | null; published_at: string | null; error_message: string | null; client_key: string | null; host_id: string | null; target_handle: string | null; created_at: string };
-type Registry = { connections: Connection[]; organizations: Organization[]; channels: Channel[]; assignments: Assignment[]; authorizations: Authorization[]; publications: Publication[]; assets: Asset[] };
+type MediaIntake = { id: string; owner_user_id: string; model_id: string; source_url: string; source_host: string; rights_holder: string | null; rights_evidence_url: string | null; status: string; asset_registry_id: string | null; review_note: string | null; created_at: string };\ntype Registry = { connections: Connection[]; organizations: Organization[]; channels: Channel[]; assignments: Assignment[]; authorizations: Authorization[]; publications: Publication[]; assets: Asset[]; media_intake: MediaIntake[] };
 
-const empty: Registry = { connections: [], organizations: [], channels: [], assignments: [], authorizations: [], publications: [], assets: [] };
+const empty: Registry = { connections: [], organizations: [], channels: [], assignments: [], authorizations: [], publications: [], assets: [], media_intake: [] };
 const dateLabel = (value?: string | null) => value ? new Date(value).toLocaleString() : "Not yet verified";
 const statusTone = (value: string) => value === "connected" || value === "verified" || value === "approved" || value === "scheduled" || value === "sent" ? "default" : "secondary";
 
@@ -69,7 +69,7 @@ export default function EliteMediaCeoDashboard() {
         connections: data.connections || [], organizations: data.organizations || [],
         channels: data.channels || [], assignments: data.assignments || [],
         authorizations: data.authorizations || [], publications: data.publications || [],
-        assets: data.assets || [],
+        assets: data.assets || [], media_intake: data.media_intake || [],
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load publishing control center.");
@@ -159,6 +159,30 @@ export default function EliteMediaCeoDashboard() {
       toast.success("Live queue publishing enabled for this verified client/channel pair.");
       await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Could not enable this channel."); }
+    finally { setBusy(""); }
+  };
+
+  const completeMediaIntake = async (intake: MediaIntake) => {
+    const candidate = window.prompt("Enter the exact asset registry ID after ingestion and QA approval:");
+    if (!candidate?.trim()) return;
+    setBusy(`intake:${intake.id}`);
+    try {
+      await api("/api/integrations/buffer/registry", "POST", { action: "complete_media_intake", intake_id: intake.id, asset_id: candidate.trim() });
+      toast.success("Client media link matched to the approved asset registry.");
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Media intake review failed."); }
+    finally { setBusy(""); }
+  };
+
+  const rejectMediaIntake = async (intake: MediaIntake) => {
+    const note = window.prompt("Reason for rejecting this media link:");
+    if (!note?.trim()) return;
+    setBusy(`intake:${intake.id}`);
+    try {
+      await api("/api/integrations/buffer/registry", "POST", { action: "reject_media_intake", intake_id: intake.id, review_note: note.trim() });
+      toast.success("Media intake rejected.");
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Media intake review failed."); }
     finally { setBusy(""); }
   };
 
@@ -286,6 +310,19 @@ export default function EliteMediaCeoDashboard() {
             </CardContent>
           </Card>
         </section>
+
+        <Card className="border-white/10 bg-white/[0.035] text-white">
+          <CardHeader><CardTitle className="font-display text-2xl">Client-submitted media links</CardTitle><CardDescription className="text-white/50">Links remain pending until the source is ingested, registered and passes QA, rights, commercial and origin review. This control only links an exact source URL to an already-cleared registry asset; it does not bypass ingestion or review.</CardDescription></CardHeader>
+          <CardContent className="space-y-3">
+            {registry.media_intake.filter((item) => item.status === "pending").map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 p-3">
+                <div className="min-w-0"><p className="break-all text-sm">{item.source_url}</p><p className="mt-1 text-xs text-white/40">Client {item.owner_user_id.slice(0, 8)} · {item.source_host} · rights holder: {item.rights_holder || "not stated"}</p><a href={item.rights_evidence_url || undefined} target="_blank" rel="noreferrer" className="text-xs text-gold underline">Rights evidence</a></div>
+                <div className="flex gap-2"><Button size="sm" disabled={busy === `intake:${item.id}`} onClick={() => void completeMediaIntake(item)} className="bg-gold text-black hover:bg-gold/90">Link approved asset</Button><Button size="sm" variant="outline" disabled={busy === `intake:${item.id}`} onClick={() => void rejectMediaIntake(item)} className="border-white/15 text-white">Reject</Button></div>
+              </div>
+            ))}
+            {!registry.media_intake.some((item) => item.status === "pending") && <p className="text-sm text-white/40">No client media links are awaiting review.</p>}
+          </CardContent>
+        </Card>
 
         <Card className="border-gold/20 bg-gradient-to-br from-gold/[0.07] to-white/[0.025] text-white">
           <CardHeader><CardTitle className="font-display text-2xl">Live Buffer queue</CardTitle><CardDescription className="text-white/50">Approved media is sent to the selected channel's next available Buffer slot. The service records the Buffer post ID and scheduled time.</CardDescription></CardHeader>
