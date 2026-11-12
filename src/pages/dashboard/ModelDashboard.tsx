@@ -35,6 +35,7 @@ const ModelDashboard = () => {
   const [model, setModel] = useState<ModelRow | null>(null);
   const [photos, setPhotos] = useState<{ url: string; path: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modelLoadError, setModelLoadError] = useState("");
   const [rescoring, setRescoring] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
   const [bufferLoading, setBufferLoading] = useState(false);
@@ -44,25 +45,55 @@ const ModelDashboard = () => {
   const [bufferError, setBufferError] = useState("");
 
   const load = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      setModel(null);
+      return;
+    }
     setLoading(true);
-    const { data: m } = await supabase.from("models").select("*").eq("user_id", user.id).maybeSingle();
-    setModel(m as ModelRow | null);
-    if (m) {
-      const { data: ph } = await supabase
+    setModelLoadError("");
+    try {
+      const { data: m, error: modelError } = await supabase
+        .from("models")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (modelError) {
+        console.error("Unable to load model profile", modelError);
+        setModelLoadError("We couldn't load your model profile. Your application has not been removed. Please retry.");
+        return;
+      }
+
+      setModel(m as ModelRow | null);
+      if (!m) {
+        setPhotos([]);
+        setBookings([]);
+        return;
+      }
+
+      const { data: ph, error: photosError } = await supabase
         .from("model_photos").select("storage_path").eq("model_id", m.id).order("position");
+      if (photosError) console.error("Unable to load model photos", photosError);
       const signed = await Promise.all(
         (ph ?? []).map(async (p) => {
-          const { data } = await supabase.storage.from("model-photos").createSignedUrl(p.storage_path, 3600);
+          const { data, error } = await supabase.storage.from("model-photos").createSignedUrl(p.storage_path, 3600);
+          if (error) console.error("Unable to create model photo URL", error);
           return { url: data?.signedUrl ?? "", path: p.storage_path };
         })
       );
       setPhotos(signed.filter((s) => s.url));
-      const { data: bk } = await supabase
+
+      const { data: bk, error: bookingsError } = await supabase
         .from("bookings").select("*, campaigns(title), brands(name)").eq("model_id", m.id).order("created_at", { ascending: false });
+      if (bookingsError) console.error("Unable to load model bookings", bookingsError);
       setBookings(bk ?? []);
+    } catch (error) {
+      console.error("Unexpected model dashboard profile load failure", error);
+      setModelLoadError("We couldn't load your model profile. Your application has not been removed. Please retry.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
@@ -131,13 +162,28 @@ const ModelDashboard = () => {
     );
   }
 
+  if (modelLoadError) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <div className="container py-20 text-center space-y-4">
+          <p role="alert" className="text-muted-foreground">{modelLoadError}</p>
+          <Button onClick={() => void load()} className="bg-gold text-primary-foreground">
+            <RefreshCw className="mr-2 h-4 w-4" />Retry profile load
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (!model) {
     return (
       <div className="min-h-screen">
         <Navbar />
         <div className="container py-20 text-center">
-          <p className="text-muted-foreground">No model profile yet.</p>
-          <Button asChild className="mt-4 bg-gold text-primary-foreground"><a href="/onboarding/model">Complete onboarding</a></Button>
+          <p className="text-muted-foreground">No model profile was found for this signed-in account.</p>
+          <p className="text-sm text-muted-foreground mt-2">If you already submitted an application, sign in with the same email used during submission or contact the Elite NG team. Do not submit a duplicate application.</p>
+          <Button asChild className="mt-4 bg-gold text-primary-foreground"><a href="/onboarding/model">Start onboarding</a></Button>
         </div>
       </div>
     );
