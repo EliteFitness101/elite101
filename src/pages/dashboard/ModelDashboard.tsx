@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Sparkles, Loader2, MapPin, Instagram, RefreshCw, Link2, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Sparkles, Loader2, MapPin, Instagram, RefreshCw, Link2, CalendarDays } from "lucide-react";
 
 interface ModelRow {
   id: string;
