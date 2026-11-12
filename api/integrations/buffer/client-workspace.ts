@@ -34,6 +34,8 @@ export default async function handler(req: any, res: any) {
     const model = await modelFor(owner.id);
     if (req.method === "GET") {
       const channels = await db(`buffer_channels?owner_user_id=eq.${owner.id}&select=channel_id,organization_id,connection_id,platform,name,handle,active,is_verified,publishing_enabled,provider_disconnected,provider_locked&order=name.asc`);
+      const connectionIds = [...new Set((channels || []).map((channel: any) => channel.connection_id).filter(Boolean))];
+      const organizations = connectionIds.length ? await db(`buffer_organizations?connection_id=in.(${connectionIds.join(",")})&select=connection_id,organization_id,name,active,last_synced_at&order=name.asc`) : [];
       const assignments = await db(`buffer_channel_assignments?owner_user_id=eq.${owner.id}&client_key=eq.${model.id}&select=id,channel_id,organization_id,client_key,host_id,expected_handle,assignment_status,verified_at&order=created_at.desc`);
       const hostIds = [...new Set((assignments || []).filter((row: any) => row.assignment_status === "verified").map((row: any) => row.host_id).filter(Boolean))];
       const highlights = hostIds.length ? await db(`resofit_live_highlights?host_id=in.(${hostIds.map(encodeURIComponent).join(",")})&select=id,host_id,title,caption,imagekit_url,status,content_asset_id,created_at&order=created_at.desc&limit=100`) : [];
@@ -43,7 +45,7 @@ export default async function handler(req: any, res: any) {
       const assetIds = [...new Set([...highlightAssetIds, ...intakeAssetIds])];
       const assets = assetIds.length ? await db(`content_asset_registry?id=in.(${assetIds.join(",")})&select=id,asset_type,mime_type,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,publish_blockers,tiktok_eligible,youtube_eligible,google_business_eligible&order=created_at.desc`) : [];
       const authorizations = await db(`buffer_asset_authorizations?owner_user_id=eq.${owner.id}&client_key=eq.${model.id}&select=id,asset_registry_id,channel_id,organization_id,authorization_status,rights_holder,expires_at&order=created_at.desc&limit=100`);
-      return res.status(200).json({ ok: true, model: { id: model.id, name: model.full_name }, channels, assignments, highlights, assets, authorizations, media_intake: intake });
+      return res.status(200).json({ ok: true, model: { id: model.id, name: model.full_name }, organizations, channels, assignments, highlights, assets, authorizations, media_intake: intake });
     }
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
