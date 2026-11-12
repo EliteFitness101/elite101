@@ -40,8 +40,8 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Lint changed production paths
-        run: npx eslint src/App.tsx src/pages/Index.tsx src/pages/Questionnaire.tsx supabase/functions/elite-host-apply/index.ts
+        run: npx eslint src/App.tsx src/pages/Index.tsx src/pages/Questionnaire.tsx src/pages/dashboard/ModelDashboard.tsx src/pages/onboarding/ModelOnboarding.tsx src/test/buffer-oauth-auth.test.ts lib/server/buffer-oauth.ts api/auth/buffer/connections/start.ts api/auth/buffer/callback.ts api/auth/buffer/connections/index.ts supabase/functions/elite-host-apply/index.ts supabase/functions/score-model/index.ts
       - name: Unit tests
-        run: npm run test -- --passWithNoTests
+        run: npm run test
       - name: Production build
         run: npm run build
