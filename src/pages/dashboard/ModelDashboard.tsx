@@ -43,6 +43,18 @@ const ModelDashboard = () => {
   const [bufferConnection, setBufferConnection] = useState<{ id: string; label: string; account_email: string | null; status: string } | null>(null);
   const [bufferChannels, setBufferChannels] = useState<Array<{ channel_id: string; name: string; platform: string; active: boolean; publishing_enabled: boolean }>>([]);
   const [bufferError, setBufferError] = useState("");
+  const [clientWorkspace, setClientWorkspace] = useState<any>(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [selectedClientChannel, setSelectedClientChannel] = useState("");
+  const [selectedClientAsset, setSelectedClientAsset] = useState("");
+  const [clientHostId, setClientHostId] = useState("");
+  const [clientCaption, setClientCaption] = useState("");
+  const [clientRightsHolder, setClientRightsHolder] = useState("");
+  const [clientRightsEvidence, setClientRightsEvidence] = useState("");
+  const [clientMediaLink, setClientMediaLink] = useState("");
+  const [workspaceError, setWorkspaceError] = useState("");
+
 
   const load = async () => {
     if (!user) {
@@ -144,6 +156,72 @@ const ModelDashboard = () => {
     }
   };
 
+  const clientWorkspaceRequest = async (method = "GET", body?: Record<string, unknown>) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error("Sign in again to manage ChatB2K publishing.");
+    const response = await fetch("/api/integrations/buffer/client-workspace", {
+      method, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      ...(method === "POST" ? { body: JSON.stringify(body || {}) } : {}), cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Client publishing workspace request failed.");
+    return payload;
+  };
+
+  const loadClientWorkspace = async () => {
+    if (!user) return;
+    setWorkspaceLoading(true);
+    setWorkspaceError("");
+    try {
+      const payload = await clientWorkspaceRequest();
+      setClientWorkspace(payload);
+      if (!selectedClientChannel && payload.channels?.length) setSelectedClientChannel(payload.channels[0].channel_id);
+      if (!selectedClientAsset && payload.assets?.length) setSelectedClientAsset(payload.assets[0].id);
+    } catch (error) {
+      setWorkspaceError(error instanceof Error ? error.message : "Could not load publishing workspace.");
+    } finally { setWorkspaceLoading(false); }
+  };
+
+  useEffect(() => { void loadClientWorkspace(); /* eslint-disable-next-line */ }, [user]);
+
+  const runClientWorkspaceAction = async (body: Record<string, unknown>) => {
+    setWorkspaceBusy(true);
+    setWorkspaceError("");
+    try {
+      await clientWorkspaceRequest("POST", body);
+      toast.success("ChatB2K publishing workspace updated.");
+      await loadClientWorkspace();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Publishing workspace action failed.";
+      setWorkspaceError(message);
+      toast.error(message);
+    } finally { setWorkspaceBusy(false); }
+  };
+
+  const queueClientPost = async () => {
+    setWorkspaceBusy(true);
+    setWorkspaceError("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sign in again before publishing.");
+      const response = await fetch("/api/integrations/buffer/client-publish", {
+        method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ asset_id: selectedClientAsset, channel_id: selectedClientChannel, caption: clientCaption, confirm_publish: true }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not add this post to Buffer.");
+      toast.success("Approved post added to your Buffer queue.");
+      setClientCaption("");
+      await loadClientWorkspace();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Buffer queue request failed.";
+      setWorkspaceError(message);
+      toast.error(message);
+    } finally { setWorkspaceBusy(false); }
+  };
+
   const reScore = async () => {
     if (!model) return;
     setRescoring(true);
@@ -241,6 +319,58 @@ const ModelDashboard = () => {
             <div className="flex items-center gap-2 font-medium"><CalendarDays className="h-4 w-4 text-gold" /> Publishing permissions</div>
             <p className="text-xs text-muted-foreground">Connecting Buffer imports the channels but does not publish automatically. Publishing remains disabled until you approve the content and a schedule is configured in the ChatB2K publishing workspace.</p>
           </div>
+        </section>
+
+        <section className="glass-strong rounded-3xl p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><h2 className="font-display text-xl">Client-owned ChatB2K autopublishing</h2>
+              <p className="text-sm text-muted-foreground mt-1">Map your Buffer organization to your Highlights host, authorize cleared media, approve a caption and add it to your Buffer queue.</p></div>
+            <Button variant="outline" onClick={() => void loadClientWorkspace()} disabled={workspaceLoading}>{workspaceLoading ? "Refreshing…" : "Refresh workspace"}</Button>
+          </div>
+          {workspaceError && <p role="alert" className="text-sm text-destructive">{workspaceError}</p>}
+          {workspaceLoading ? <p className="text-sm text-muted-foreground">Loading your organizations, channels and eligible captures…</p> : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="text-sm space-y-1">Your Buffer channel
+                  <select className="w-full rounded-xl border border-border bg-background p-3" value={selectedClientChannel} onChange={(e) => setSelectedClientChannel(e.target.value)}>
+                    <option value="">Select a channel</option>
+                    {(clientWorkspace?.channels || []).map((channel: any) => <option key={channel.channel_id} value={channel.channel_id}>{channel.name} · {channel.platform} · {channel.organization_id}</option>)}
+                  </select>
+                </label>
+                <label className="text-sm space-y-1">BIGO / Highlights host ID
+                  <input className="w-full rounded-xl border border-border bg-background p-3" value={clientHostId} onChange={(e) => setClientHostId(e.target.value)} placeholder="Exact verified host ID" />
+                </label>
+              </div>
+              <Button disabled={workspaceBusy || !selectedClientChannel || !clientHostId.trim()} variant="outline" onClick={() => void runClientWorkspaceAction({ action: "map_channel", channel_id: selectedClientChannel, host_id: clientHostId.trim() })}>Map my Buffer channel to Highlights host</Button>
+              <div className="text-xs text-muted-foreground">{(clientWorkspace?.assignments || []).length} channel mapping(s) · {(clientWorkspace?.highlights || []).length} matching Highlights capture(s)</div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="text-sm space-y-1">Eligible Highlights asset
+                  <select className="w-full rounded-xl border border-border bg-background p-3" value={selectedClientAsset} onChange={(e) => setSelectedClientAsset(e.target.value)}>
+                    <option value="">Select a cleared asset</option>
+                    {(clientWorkspace?.assets || []).filter((asset: any) => asset.qa_status === "approved" && asset.rights_status === "verified" && asset.commercial_status === "authorized" && asset.origin_review_status === "approved").map((asset: any) => <option key={asset.id} value={asset.id}>{asset.asset_type} · {asset.id.slice(0, 8)}</option>)}
+                  </select>
+                </label>
+                <label className="text-sm space-y-1">Rights holder
+                  <input className="w-full rounded-xl border border-border bg-background p-3" value={clientRightsHolder} onChange={(e) => setClientRightsHolder(e.target.value)} placeholder="Person or entity holding publishing rights" />
+                </label>
+              </div>
+              <label className="block text-sm space-y-1">Rights evidence URL
+                <input type="url" className="w-full rounded-xl border border-border bg-background p-3" value={clientRightsEvidence} onChange={(e) => setClientRightsEvidence(e.target.value)} placeholder="https://… ownership / licence evidence" />
+              </label>
+              <Button disabled={workspaceBusy || !selectedClientAsset || !selectedClientChannel || !clientRightsHolder.trim() || !clientRightsEvidence.startsWith("https://")} variant="outline" onClick={() => void runClientWorkspaceAction({ action: "authorize_asset", asset_id: selectedClientAsset, channel_id: selectedClientChannel, rights_holder: clientRightsHolder.trim(), rights_evidence_url: clientRightsEvidence, confirm_rights: true })}>Confirm rights and enable channel</Button>
+              <label className="block text-sm space-y-1">Caption / post copy
+                <textarea className="w-full min-h-24 rounded-xl border border-border bg-background p-3" maxLength={2200} value={clientCaption} onChange={(e) => setClientCaption(e.target.value)} placeholder="Write or paste your approved ChatB2K caption…" />
+              </label>
+              <Button disabled={workspaceBusy || !selectedClientAsset || !selectedClientChannel || !clientCaption.trim()} onClick={() => void queueClientPost()} className="bg-gold text-primary-foreground">Approve and add to Buffer queue</Button>
+              <div className="border-t border-border/60 pt-4 space-y-2">
+                <h3 className="font-medium">Supply another media link</h3>
+                <p className="text-xs text-muted-foreground">External links enter review and ingestion first. They cannot bypass asset QA, ownership or platform clearance.</p>
+                <input type="url" className="w-full rounded-xl border border-border bg-background p-3" value={clientMediaLink} onChange={(e) => setClientMediaLink(e.target.value)} placeholder="https://public-media-link…" />
+                <Button disabled={workspaceBusy || !clientMediaLink.startsWith("https://") || !clientRightsHolder.trim() || !clientRightsEvidence.startsWith("https://")} variant="outline" onClick={async () => { await runClientWorkspaceAction({ action: "submit_media_link", media_url: clientMediaLink, rights_holder: clientRightsHolder.trim(), rights_evidence_url: clientRightsEvidence, confirm_rights: true }); setClientMediaLink(""); }}>Submit media link for ingestion review</Button>
+                {(clientWorkspace?.media_intake || []).map((item: any) => <div key={item.id} className="text-xs text-muted-foreground flex justify-between gap-3"><span className="truncate">{item.source_url}</span><Badge variant="outline">{item.status}</Badge></div>)}
+              </div>
+            </>
+          )}
         </section>
 
         {/* Score card */}
