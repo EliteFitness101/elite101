@@ -32,15 +32,38 @@ Deno.serve(async (req) => {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: callerData, error: callerError } = await callerClient.auth.getUser();
+    if (callerError || !callerData.user) {
+      return new Response(JSON.stringify({ error: "Valid sign-in required" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch model
     const { data: model, error: modelErr } = await supabase
       .from("models").select("*, model_photos(storage_path, position)").eq("id", model_id).maybeSingle();
     if (modelErr || !model) throw new Error("Model not found");
+    if (model.user_id !== callerData.user.id) {
+      const { data: adminRole } = await supabase.from("user_roles")
+        .select("user_id").eq("user_id", callerData.user.id).eq("role", "admin").maybeSingle();
+      if (!adminRole) {
+        return new Response(JSON.stringify({ error: "You cannot score another user's model profile" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Sign first 4 photos
     const photos = (model.model_photos || []).sort((a: any, b: any) => a.position - b.position).slice(0, 4);
@@ -177,7 +200,6 @@ Score this model for the Nigerian fashion/beauty/influencer market. Consider pho
         ai_improvements: result.improvements,
         ig_followers,
         scored_at: new Date().toISOString(),
-        status: "approved", // auto-approve for MVP
       })
       .eq("id", model_id);
     if (updErr) throw updErr;
