@@ -71,7 +71,6 @@ const ModelOnboarding = () => {
         if (error) {
           console.error("Unable to restore onboarding draft:", error);
           setDraftStatus("error");
-          setDraftHydrated(true);
           return;
         }
         if (data?.payload) {
