@@ -122,7 +122,7 @@ const ModelOnboarding = () => {
         console.error("Scoring failed:", scoreErr);
         toast.warning("Profile saved. ResoFlex™ scoring will be retried — visit your dashboard to re-trigger.");
       } else {
-        toast.success("Profile created and scored!");
+        toast.success("Profile submitted. ResoFlex™ scoring is ready for the Elite NG review team.");
       }
       try {
         const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
