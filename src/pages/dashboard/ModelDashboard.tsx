@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Sparkles, Loader2, MapPin, Instagram, RefreshCw } from "lucide-react";
+import { Sparkles, Loader2, MapPin, Instagram, RefreshCw, Link2, CalendarDays } from "lucide-react";
 
 interface ModelRow {
   id: string;
@@ -37,6 +37,11 @@ const ModelDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [rescoring, setRescoring] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [bufferLoading, setBufferLoading] = useState(false);
+  const [bufferConnecting, setBufferConnecting] = useState(false);
+  const [bufferConnection, setBufferConnection] = useState<{ id: string; label: string; account_email: string | null; status: string } | null>(null);
+  const [bufferChannels, setBufferChannels] = useState<Array<{ channel_id: string; name: string; platform: string; active: boolean; publishing_enabled: boolean }>>([]);
+  const [bufferError, setBufferError] = useState("");
 
   const load = async () => {
     if (!user) return;
@@ -61,6 +66,52 @@ const ModelDashboard = () => {
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+
+  const loadBuffer = async () => {
+    if (!user) return;
+    setBufferLoading(true);
+    setBufferError("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sign in again to manage Buffer.");
+      const response = await fetch("/api/auth/buffer/connections", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load your Buffer connection.");
+      setBufferConnection(payload.connections?.[0] ?? null);
+      setBufferChannels(payload.channels ?? []);
+    } catch (error) {
+      setBufferError(error instanceof Error ? error.message : "Buffer status is unavailable.");
+    } finally {
+      setBufferLoading(false);
+    }
+  };
+
+  useEffect(() => { void loadBuffer(); /* eslint-disable-next-line */ }, [user]);
+
+  const connectBuffer = async () => {
+    setBufferConnecting(true);
+    setBufferError("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Sign in again before connecting Buffer.");
+      const response = await fetch("/api/auth/buffer/connections/start", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ label: `${model?.full_name || "Model"} social channels` }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.authorizationUrl) throw new Error(payload.error || "Buffer authorization could not start.");
+      window.location.assign(payload.authorizationUrl);
+    } catch (error) {
+      setBufferError(error instanceof Error ? error.message : "Buffer connection failed.");
+      setBufferConnecting(false);
+    }
+  };
 
   const reScore = async () => {
     if (!model) return;
@@ -111,6 +162,40 @@ const ModelDashboard = () => {
             {rescoring ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scoring...</> : <><RefreshCw className="mr-2 h-4 w-4" />Re-run ResoFlex™ score</>}
           </Button>
         </div>
+
+        <section className="glass-strong rounded-3xl p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl flex items-center gap-2"><Link2 className="h-5 w-5 text-gold" /> ChatB2K Social Publishing</h2>
+              <p className="text-sm text-muted-foreground mt-1">Connect your own Buffer account. Your credentials remain isolated from other clients.</p>
+            </div>
+            {bufferConnection?.status === "connected" ? <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">Buffer connected</Badge> : <Badge variant="outline">Not connected</Badge>}
+          </div>
+          {bufferError && <p role="alert" className="text-sm text-destructive">{bufferError}</p>}
+          {bufferLoading ? <p className="text-sm text-muted-foreground">Checking your Buffer connection…</p> : bufferConnection ? (
+            <div className="space-y-3">
+              <div className="text-sm"><span className="text-muted-foreground">Account: </span>{bufferConnection.account_email || bufferConnection.label}</div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {bufferChannels.map((channel) => (
+                  <div key={channel.channel_id} className="flex items-center justify-between rounded-xl border border-border/60 p-3 text-sm">
+                    <div><div className="font-medium">{channel.name}</div><div className="text-xs text-muted-foreground capitalize">{channel.platform}</div></div>
+                    <Badge variant="outline" className={channel.active ? "border-emerald-500/40 text-emerald-400" : ""}>{channel.active ? "Available" : "Inactive"}</Badge>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={connectBuffer} disabled={bufferConnecting} variant="outline" className="border-gold/40">{bufferConnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}Reconnect / refresh Buffer</Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Connect the Buffer account that owns the social channels you want ChatB2K to prepare content for.</p>
+              <Button onClick={connectBuffer} disabled={bufferConnecting} className="bg-gold text-primary-foreground">{bufferConnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}Connect my Buffer</Button>
+            </div>
+          )}
+          <div className="rounded-xl border border-border/60 p-4 space-y-2">
+            <div className="flex items-center gap-2 font-medium"><CalendarDays className="h-4 w-4 text-gold" /> Publishing permissions</div>
+            <p className="text-xs text-muted-foreground">Connecting Buffer imports the channels but does not publish automatically. Publishing remains disabled until you approve the content and a schedule is configured in the ChatB2K publishing workspace.</p>
+          </div>
+        </section>
 
         {/* Score card */}
         <div className="grid md:grid-cols-3 gap-4">

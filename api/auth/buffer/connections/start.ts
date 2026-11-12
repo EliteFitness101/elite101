@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
-  fail, makeSignedStateCookie, requiredEnv, requireAdmin, supabaseConfig, validateRedirectUri,
+  fail, makeSignedStateCookie, requiredEnv, requireUser, supabaseConfig, validateRedirectUri,
 } from "../../../../lib/server/buffer-oauth.js";
 
 export default async function handler(req: any, res: any) {
@@ -11,9 +11,19 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
   try {
-    const admin = await requireAdmin(req);
+    const owner = await requireUser(req);
+    const { url: authUrl, serviceRoleKey: authServiceKey } = supabaseConfig();
+    const roleResponse = await fetch(
+      `${authUrl}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(owner.id)}&role=in.(model,admin)&select=role&limit=1`,
+      { headers: { apikey: authServiceKey, authorization: `Bearer ${authServiceKey}` } },
+    );
+    if (!roleResponse.ok) throw new Error("Could not verify your Elite NG workspace role.");
+    const allowedRoles = await roleResponse.json() as Array<{ role: string }>;
+    if (!allowedRoles.length) {
+      return res.status(403).json({ error: "Complete your model or agency onboarding before connecting Buffer." });
+    }
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const label = String(body.label || "Buffer account").trim().slice(0, 80) || "Buffer account";
+    const label = String(body.label || "My model workspace").trim().slice(0, 80) || "Buffer account";
     const clientId = requiredEnv("BUFFER_CLIENT_ID");
     requiredEnv("BUFFER_CLIENT_SECRET");
     const redirectUri = validateRedirectUri();
@@ -28,7 +38,7 @@ export default async function handler(req: any, res: any) {
         apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}`,
         "Content-Type": "application/json", Prefer: "return=minimal",
       },
-      body: JSON.stringify({ id: connectionId, owner_user_id: admin.id, label, status: "pending" }),
+      body: JSON.stringify({ id: connectionId, owner_user_id: owner.id, label, status: "pending" }),
     });
     if (!pending.ok) throw new Error("Could not create the pending Buffer connection.");
     const authorizationUrl = new URL("https://auth.buffer.com/auth");
