@@ -41,7 +41,9 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!, {
+    const publicKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+    if (!publicKey) throw new Error("Supabase public API key is not configured");
+    const callerClient = createClient(supabaseUrl, publicKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: callerData, error: callerError } = await callerClient.auth.getUser();
