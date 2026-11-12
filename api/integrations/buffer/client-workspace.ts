@@ -35,7 +35,7 @@ export default async function handler(req: any, res: any) {
     if (req.method === "GET") {
       const channels = await db(`buffer_channels?owner_user_id=eq.${owner.id}&select=channel_id,organization_id,connection_id,platform,name,handle,active,is_verified,publishing_enabled,provider_disconnected,provider_locked&order=name.asc`);
       const assignments = await db(`buffer_channel_assignments?owner_user_id=eq.${owner.id}&client_key=eq.${model.id}&select=id,channel_id,organization_id,client_key,host_id,expected_handle,assignment_status,verified_at&order=created_at.desc`);
-      const hostIds = [...new Set((assignments || []).map((row: any) => row.host_id).filter(Boolean))];
+      const hostIds = [...new Set((assignments || []).filter((row: any) => row.assignment_status === "verified").map((row: any) => row.host_id).filter(Boolean))];
       const highlights = hostIds.length ? await db(`resofit_live_highlights?host_id=in.(${hostIds.map(encodeURIComponent).join(",")})&select=id,host_id,title,caption,imagekit_url,status,content_asset_id,created_at&order=created_at.desc&limit=100`) : [];
       const intake = await db(`buffer_client_media_intake?owner_user_id=eq.${owner.id}&model_id=eq.${model.id}&select=id,source_url,status,asset_registry_id,review_note,created_at&order=created_at.desc&limit=30`);
       const highlightAssetIds = (highlights || []).map((row: any) => row.content_asset_id).filter(Boolean);
