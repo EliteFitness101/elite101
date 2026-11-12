@@ -54,6 +54,8 @@ export default async function handler(req: any, res: any) {
     if (action === "map_channel") {
       const channelId = key(body.channel_id, "Buffer channel");
       const hostId = key(body.host_id, "Highlights host ID", 160);
+      const hostEvidenceUrl = key(body.host_evidence_url, "host ownership evidence URL", 1000);
+      if (!/^https:\/\//i.test(hostEvidenceUrl)) throw new HttpError(400, "Provide an HTTPS public profile or host ownership evidence URL.");
       const channels = await db(`buffer_channels?owner_user_id=eq.${owner.id}&channel_id=eq.${encodeURIComponent(channelId)}&select=channel_id,organization_id,connection_id,handle,is_verified,active,provider_disconnected,provider_locked&limit=1`);
       const channel = channels?.[0];
       if (!channel || !channel.is_verified || !channel.active || channel.provider_disconnected || channel.provider_locked || !channel.connection_id) {
@@ -64,7 +66,7 @@ export default async function handler(req: any, res: any) {
         channel_id: channel.channel_id, client_key: model.id, host_id: hostId,
         expected_handle: String(channel.handle || "").replace(/^@/, ""),
         assignment_status: "pending",
-        owner_evidence: { source: "owner_scoped_buffer_oauth", owner_user_id: owner.id, model_id: model.id, host_id_attested_by_owner: true, attested_at: new Date().toISOString(), review_required: true },
+        owner_evidence: { source: "owner_scoped_buffer_oauth", owner_user_id: owner.id, model_id: model.id, host_id_attested_by_owner: true, host_evidence_url: hostEvidenceUrl, attested_at: new Date().toISOString(), review_required: true },
         updated_at: new Date().toISOString(),
       }], "resolution=merge-duplicates,return=minimal");
       return res.status(202).json({ ok: true, mapped: false, assignment_status: "pending", channel_id: channelId, organization_id: channel.organization_id, message: "Mapping submitted. Highlights publishing unlocks after Elite verifies the host-to-channel relationship." });
