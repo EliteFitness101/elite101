@@ -37,10 +37,12 @@ export default async function handler(req: any, res: any) {
       const assignments = await db(`buffer_channel_assignments?owner_user_id=eq.${owner.id}&client_key=eq.${model.id}&select=id,channel_id,organization_id,client_key,host_id,expected_handle,assignment_status,verified_at&order=created_at.desc`);
       const hostIds = [...new Set((assignments || []).map((row: any) => row.host_id).filter(Boolean))];
       const highlights = hostIds.length ? await db(`resofit_live_highlights?host_id=in.(${hostIds.map(encodeURIComponent).join(",")})&select=id,host_id,title,caption,imagekit_url,status,content_asset_id,created_at&order=created_at.desc&limit=100`) : [];
-      const assetIds = [...new Set((highlights || []).map((row: any) => row.content_asset_id).filter(Boolean))];
+      const intake = await db(`buffer_client_media_intake?owner_user_id=eq.${owner.id}&model_id=eq.${model.id}&select=id,source_url,status,asset_registry_id,review_note,created_at&order=created_at.desc&limit=30`);
+      const highlightAssetIds = (highlights || []).map((row: any) => row.content_asset_id).filter(Boolean);
+      const intakeAssetIds = (intake || []).filter((row: any) => row.status === "ingested" && row.asset_registry_id).map((row: any) => row.asset_registry_id);
+      const assetIds = [...new Set([...highlightAssetIds, ...intakeAssetIds])];
       const assets = assetIds.length ? await db(`content_asset_registry?id=in.(${assetIds.join(",")})&select=id,asset_type,mime_type,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,publish_blockers,tiktok_eligible,youtube_eligible,google_business_eligible&order=created_at.desc`) : [];
       const authorizations = await db(`buffer_asset_authorizations?owner_user_id=eq.${owner.id}&client_key=eq.${model.id}&select=id,asset_registry_id,channel_id,organization_id,authorization_status,rights_holder,expires_at&order=created_at.desc&limit=100`);
-      const intake = await db(`buffer_client_media_intake?owner_user_id=eq.${owner.id}&model_id=eq.${model.id}&select=id,source_url,status,asset_registry_id,review_note,created_at&order=created_at.desc&limit=30`);
       return res.status(200).json({ ok: true, model: { id: model.id, name: model.full_name }, channels, assignments, highlights, assets, authorizations, media_intake: intake });
     }
     if (req.method !== "POST") {
