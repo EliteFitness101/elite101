@@ -35,17 +35,19 @@ export default async function handler(req: any, res: any) {
     const admin = await requireAdmin(req);
     if (req.method === "GET") {
       const owner = encodeURIComponent(admin.id);
-      const [connections, channels, assignments, authorizations, publications, assets] = await Promise.all([
+      const [connections, channels, assignments, authorizations, publications, assets, mediaIntake, pendingClientMappings] = await Promise.all([
         db(`buffer_oauth_connections?owner_user_id=eq.${owner}&select=id,label,account_id,account_email,account_name,status,last_verified_at,last_error,connected_at,created_at&order=created_at.desc`),
         db(`buffer_channels?owner_user_id=eq.${owner}&select=id,organization_id,channel_id,platform,name,handle,channel_type,active,provider_disconnected,provider_locked,is_verified,publishing_enabled,last_synced_at,connection_id&order=name.asc`),
         db(`buffer_channel_assignments?owner_user_id=eq.${owner}&select=id,connection_id,organization_id,channel_id,client_key,host_id,expected_handle,assignment_status,owner_evidence,verified_at&order=created_at.desc`),
         db(`buffer_asset_authorizations?owner_user_id=eq.${owner}&select=id,asset_registry_id,client_key,host_id,channel_id,organization_id,rights_holder,authorization_status,expires_at,approved_at&order=created_at.desc&limit=100`),
         db("buffer_publications?select=id,channel_id,platform,buffer_post_id,status,scheduled_at,published_at,error_message,client_key,host_id,target_handle,created_at&order=created_at.desc&limit=30"),
-        db("content_asset_registry?qa_status=eq.approved&rights_status=eq.verified&commercial_status=eq.authorized&origin_review_status=eq.approved&select=id,brand,campaign,asset_type,mime_type,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,created_at&order=created_at.desc&limit=100"),
+        db("content_asset_registry?qa_status=eq.approved&rights_status=eq.verified&commercial_status=eq.authorized&origin_review_status=eq.approved&select=id,brand,campaign,asset_type,mime_type,source_url,canonical_url,qa_status,rights_status,commercial_status,origin_review_status,tiktok_eligible,youtube_eligible,google_business_eligible,created_at&order=created_at.desc&limit=100"),
+        db("buffer_client_media_intake?select=id,owner_user_id,model_id,source_url,source_host,rights_holder,rights_evidence_url,status,asset_registry_id,review_note,created_at&order=created_at.desc&limit=100"),
+        db("buffer_channel_assignments?assignment_status=eq.pending&select=id,owner_user_id,connection_id,organization_id,channel_id,client_key,host_id,expected_handle,owner_evidence,created_at&order=created_at.asc&limit=100"),
       ]);
       const orgIds = [...new Set((connections || []).map((c: any) => c.id))];
       const organizations = orgIds.length ? await db(`buffer_organizations?connection_id=in.(${orgIds.join(",")})&select=id,connection_id,organization_id,name,active,last_synced_at&order=name.asc`) : [];
-      return res.status(200).json({ ok: true, connections, organizations, channels, assignments, authorizations, publications, assets });
+      return res.status(200).json({ ok: true, connections, organizations, channels, assignments, authorizations, publications, assets, media_intake: mediaIntake, pending_client_mappings: pendingClientMappings });
     }
     if (req.method !== "POST") {
       res.setHeader("Allow", "GET, POST");
@@ -53,6 +55,54 @@ export default async function handler(req: any, res: any) {
     }
     const body = bodyOf(req);
     const action = String(body.action || "");
+    if (action === "verify_client_mapping") {
+      const assignmentId = safeKey(body.assignment_id, "assignment ID");
+      const ownerUserId = safeKey(body.owner_user_id, "client owner user ID");
+      if (body.confirm_host !== true) throw new HttpError(400, "Explicit CEO confirmation of the host-to-channel identity is required.");
+      const [rows, models] = await Promise.all([
+        db(`buffer_channel_assignments?id=eq.${encodeURIComponent(assignmentId)}&owner_user_id=eq.${encodeURIComponent(ownerUserId)}&assignment_status=eq.pending&select=id,owner_user_id,connection_id,organization_id,channel_id,client_key,host_id,expected_handle,owner_evidence&limit=1`),
+        db(`models?id=eq.${encodeURIComponent(String(body.client_key || ""))}&user_id=eq.${encodeURIComponent(ownerUserId)}&select=id&limit=1`),
+      ]);
+      const assignment = rows?.[0];
+      if (!assignment || !models?.length || assignment.client_key !== models[0].id) throw new HttpError(404, "Pending client mapping was not found for this model owner.");
+      const evidenceUrl = String(assignment.owner_evidence?.host_evidence_url || "");
+      if (!/^https:\/\//i.test(evidenceUrl)) throw new HttpError(409, "Client host identity evidence is missing.");
+      const channels = await db(`buffer_channels?owner_user_id=eq.${encodeURIComponent(ownerUserId)}&channel_id=eq.${encodeURIComponent(assignment.channel_id)}&connection_id=eq.${encodeURIComponent(assignment.connection_id)}&select=channel_id,organization_id,handle,is_verified,active,provider_disconnected,provider_locked&limit=1`);
+      const channel = channels?.[0];
+      if (!channel || !channel.is_verified || !channel.active || channel.provider_disconnected || channel.provider_locked || channel.organization_id !== assignment.organization_id) throw new HttpError(409, "The linked Buffer channel is no longer verified and active.");
+      if (String(channel.handle || "").replace(/^@/, "").toLowerCase() !== String(assignment.expected_handle || "").replace(/^@/, "").toLowerCase()) throw new HttpError(409, "Buffer channel handle does not match the submitted assignment.");
+      await db(`buffer_channel_assignments?id=eq.${encodeURIComponent(assignmentId)}&assignment_status=eq.pending`, "PATCH", {
+        assignment_status: "verified", verified_by: admin.id, verified_at: new Date().toISOString(),
+        owner_evidence: { ...assignment.owner_evidence, ceo_reviewed_by: admin.id, ceo_reviewed_at: new Date().toISOString() },
+        updated_at: new Date().toISOString(),
+      }, "return=minimal");
+      return res.status(200).json({ ok: true, assignment_status: "verified", channel_id: assignment.channel_id, host_id: assignment.host_id });
+    }
+    if (action === "complete_media_intake") {
+      const intakeId = safeKey(body.intake_id, "media intake ID");
+      const assetId = safeKey(body.asset_id, "registered asset ID");
+      const [intakes, assets] = await Promise.all([
+        db(`buffer_client_media_intake?id=eq.${encodeURIComponent(intakeId)}&status=eq.pending&select=id,source_url,owner_user_id,model_id&limit=1`),
+        db(`content_asset_registry?id=eq.${encodeURIComponent(assetId)}&select=id,source_url,canonical_url,qa_status,rights_status,commercial_status,origin_review_status&limit=1`),
+      ]);
+      if (!intakes?.length || !assets?.length) throw new HttpError(404, "Pending media intake or registered asset was not found.");
+      const intake = intakes[0], asset = assets[0];
+      if (asset.source_url !== intake.source_url && asset.canonical_url !== intake.source_url) throw new HttpError(409, "The registered asset source URL must exactly match the client-submitted URL.");
+      if (asset.qa_status !== "approved" || asset.rights_status !== "verified" || asset.commercial_status !== "authorized" || asset.origin_review_status !== "approved") throw new HttpError(409, "Asset must pass QA, rights, commercial and origin review before intake can be completed.");
+      await db(`buffer_client_media_intake?id=eq.${encodeURIComponent(intakeId)}`, "PATCH", {
+        status: "ingested", asset_registry_id: assetId, review_note: "Matched to approved content asset registry by administrator.",
+        updated_at: new Date().toISOString(),
+      }, "return=minimal");
+      return res.status(200).json({ ok: true, status: "ingested", asset_id: assetId, owner_user_id: intake.owner_user_id });
+    }
+    if (action === "reject_media_intake") {
+      const intakeId = safeKey(body.intake_id, "media intake ID");
+      const note = safeKey(body.review_note, "review note", 500);
+      await db(`buffer_client_media_intake?id=eq.${encodeURIComponent(intakeId)}&status=eq.pending`, "PATCH", {
+        status: "rejected", review_note: note, updated_at: new Date().toISOString(),
+      }, "return=minimal");
+      return res.status(200).json({ ok: true, status: "rejected" });
+    }
     if (action === "sync") {
       const connectionId = safeKey(body.connection_id, "connection ID");
       const result = await syncBufferConnection(connectionId, admin.id);
