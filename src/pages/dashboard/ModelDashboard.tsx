@@ -49,6 +49,7 @@ const ModelDashboard = () => {
   const [selectedClientChannel, setSelectedClientChannel] = useState("");
   const [selectedClientAsset, setSelectedClientAsset] = useState("");
   const [clientHostId, setClientHostId] = useState("");
+  const [clientHostEvidence, setClientHostEvidence] = useState("");
   const [clientCaption, setClientCaption] = useState("");
   const [clientRightsHolder, setClientRightsHolder] = useState("");
   const [clientRightsEvidence, setClientRightsEvidence] = useState("");
@@ -341,7 +342,10 @@ const ModelDashboard = () => {
                   <input className="w-full rounded-xl border border-border bg-background p-3" value={clientHostId} onChange={(e) => setClientHostId(e.target.value)} placeholder="Exact verified host ID" />
                 </label>
               </div>
-              <Button disabled={workspaceBusy || !selectedClientChannel || !clientHostId.trim()} variant="outline" onClick={() => void runClientWorkspaceAction({ action: "map_channel", channel_id: selectedClientChannel, host_id: clientHostId.trim() })}>Map my Buffer channel to Highlights host</Button>
+              <label className="block text-sm space-y-1">Host ownership / identity evidence URL
+                <input type="url" className="w-full rounded-xl border border-border bg-background p-3" value={clientHostEvidence} onChange={(e) => setClientHostEvidence(e.target.value)} placeholder="https://public-host-profile-or-authorization…" />
+              </label>
+              <Button disabled={workspaceBusy || !selectedClientChannel || !clientHostId.trim() || !clientHostEvidence.startsWith("https://")} variant="outline" onClick={() => void runClientWorkspaceAction({ action: "map_channel", channel_id: selectedClientChannel, host_id: clientHostId.trim(), host_evidence_url: clientHostEvidence })}>Submit channel-to-host mapping for verification</Button>
               <div className="text-xs text-muted-foreground">{(clientWorkspace?.assignments || []).length} channel mapping(s) · {(clientWorkspace?.highlights || []).length} matching Highlights capture(s)</div>
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="text-sm space-y-1">Eligible Highlights asset
