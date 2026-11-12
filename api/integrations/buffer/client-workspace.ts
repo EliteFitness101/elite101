@@ -61,6 +61,10 @@ export default async function handler(req: any, res: any) {
       if (!channel || !channel.is_verified || !channel.active || channel.provider_disconnected || channel.provider_locked || !channel.connection_id) {
         throw new HttpError(409, "Choose a freshly synchronized channel from your own connected Buffer account.");
       }
+      const prior = await db(`buffer_channel_assignments?owner_user_id=eq.${owner.id}&connection_id=eq.${encodeURIComponent(channel.connection_id)}&channel_id=eq.${encodeURIComponent(channelId)}&client_key=eq.${model.id}&select=id,assignment_status,host_id&limit=1`);
+      if (prior?.[0]?.assignment_status === "verified" && prior[0].host_id === hostId) {
+        return res.status(200).json({ ok: true, mapped: true, assignment_status: "verified", channel_id: channelId, organization_id: channel.organization_id });
+      }
       await db("buffer_channel_assignments?on_conflict=connection_id%2Cchannel_id%2Cclient_key", "POST", [{
         owner_user_id: owner.id, connection_id: channel.connection_id, organization_id: channel.organization_id,
         channel_id: channel.channel_id, client_key: model.id, host_id: hostId,
