@@ -28,6 +28,71 @@ const BrandOnboarding = () => {
   const [telegramChatId, setTelegramChatId] = useState("");
   const [telegramOptIn, setTelegramOptIn] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<"loading" | "saved" | "saving" | "error">("loading");
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    (supabase as any).from("brand_onboarding_drafts")
+      .select("payload")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data, error }: any) => {
+        if (!active) return;
+        if (error) {
+          console.error("Unable to restore brand onboarding draft:", error);
+          setDraftStatus("error");
+          setDraftHydrated(true);
+          return;
+        }
+        const p = data?.payload;
+        if (p?.form) setForm((current) => ({ ...current, ...p.form }));
+        if (typeof p?.careerChoices === "string") setCareerChoices(p.careerChoices);
+        if (typeof p?.personalGoals === "string") setPersonalGoals(p.personalGoals);
+        if (typeof p?.portfolioUrl === "string") setPortfolioUrl(p.portfolioUrl);
+        if (p?.socialUrls && typeof p.socialUrls === "object") setSocialUrls((current) => ({ ...current, ...p.socialUrls }));
+        setSocialReviewConsent(p?.socialReviewConsent === true);
+        setWhatsappOptIn(p?.whatsappOptIn === true);
+        if (typeof p?.telegramChatId === "string") setTelegramChatId(p.telegramChatId);
+        setTelegramOptIn(p?.telegramOptIn === true);
+        setDraftStatus("saved");
+        setDraftHydrated(true);
+      })
+      .catch((restoreFailure: any) => {
+        if (!active) return;
+        console.error("Brand onboarding draft restore failed:", restoreFailure);
+        setDraftStatus("error");
+        setDraftHydrated(true);
+      });
+    return () => { active = false; };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !draftHydrated || loading) return;
+    let active = true;
+    setDraftStatus("saving");
+    const timer = window.setTimeout(async () => {
+      const payload = {
+        form, careerChoices, personalGoals, portfolioUrl, socialUrls,
+        socialReviewConsent, whatsappOptIn, telegramChatId, telegramOptIn,
+      };
+      try {
+        const { error } = await (supabase as any).from("brand_onboarding_drafts").upsert({
+          user_id: user.id, payload, updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+        if (!active) return;
+        setDraftStatus(error ? "error" : "saved");
+        if (error) console.error("Brand onboarding autosave failed:", error);
+      } catch (saveFailure) {
+        if (!active) return;
+        console.error("Brand onboarding autosave failed:", saveFailure);
+        setDraftStatus("error");
+      }
+    }, 700);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [user, draftHydrated, loading, form, careerChoices, personalGoals, portfolioUrl,
+      socialUrls, socialReviewConsent, whatsappOptIn, telegramChatId, telegramOptIn]);
 
   useEffect(() => {
     if (!user) return;
@@ -42,14 +107,30 @@ const BrandOnboarding = () => {
     const parsed = schema.safeParse(form);
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setLoading(true);
-    const { data: brand, error } = await supabase.from("brands").insert({ user_id: user.id, ...parsed.data } as any).select("id").single();
-    if (error) toast.error(error.message);
-    else {
+    const { data: existingBrand, error: existingBrandError } = await supabase
+      .from("brands").select("id").eq("user_id", user.id).maybeSingle();
+    if (existingBrandError) {
+      toast.error(existingBrandError.message);
+      setLoading(false);
+      return;
+    }
+    let brandId = existingBrand?.id ?? null;
+    if (!brandId) {
+      const { data: createdBrand, error: createError } = await supabase
+        .from("brands").insert({ user_id: user.id, ...parsed.data } as any).select("id").single();
+      if (createError) {
+        toast.error(createError.message);
+        setLoading(false);
+        return;
+      }
+      brandId = createdBrand.id;
+    }
+    {
       try {
         const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
           body: {
             profile_type: "brand",
-            source_id: brand.id,
+            source_id: brandId,
             profile: {
               display_name: parsed.data.name,
               email: user.email,
@@ -75,6 +156,7 @@ const BrandOnboarding = () => {
         console.error("ChatB2K brand enrichment unavailable:", intelligenceFailure);
         toast.warning("Brand saved. ChatB2K enrichment will retry when its service is available.");
       }
+      await (supabase as any).from("brand_onboarding_drafts").delete().eq("user_id", user.id);
       navigate("/dashboard/brand");
     }
     setLoading(false);
@@ -87,6 +169,7 @@ const BrandOnboarding = () => {
         <div className="text-center mb-6">
           <div className="text-xs uppercase tracking-[0.3em] text-neon mb-2">Brand Setup</div>
           <h1 className="font-display text-4xl">Create your brand</h1>
+          <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">{draftStatus === "saving" ? "Saving your progress…" : draftStatus === "saved" ? "Your progress is saved securely" : draftStatus === "error" ? "Autosave unavailable — keep this page open and retry" : "Restoring your saved progress…"}</p>
         </div>
         <form onSubmit={onSubmit} className="glass-strong rounded-3xl p-6 md:p-8 space-y-4">
           <div>

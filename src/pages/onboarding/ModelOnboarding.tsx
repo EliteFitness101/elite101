@@ -71,6 +71,7 @@ const ModelOnboarding = () => {
         if (error) {
           console.error("Unable to restore onboarding draft:", error);
           setDraftStatus("error");
+          setDraftHydrated(true);
           return;
         }
         if (data?.payload) {
@@ -100,6 +101,11 @@ const ModelOnboarding = () => {
         }
         setDraftStatus("saved");
         setDraftHydrated(true);
+      }).catch((restoreFailure: any) => {
+        if (!active) return;
+        console.error("Onboarding draft restore failed:", restoreFailure);
+        setDraftStatus("error");
+        setDraftHydrated(true);
       });
     return () => { active = false; };
   }, [user]);
@@ -107,6 +113,7 @@ const ModelOnboarding = () => {
   useEffect(() => {
     if (!user || !draftHydrated || submitting) return;
     setDraftStatus("saving");
+    let active = true;
     const timer = window.setTimeout(async () => {
       const payload = {
         form, careerChoices, personalGoals, portfolioUrl, youtubeUrl, facebookUrl,
@@ -114,13 +121,20 @@ const ModelOnboarding = () => {
         photoPaths: photos.map((photo) => photo.storage_path),
         whatsappOptIn, telegramChatId, telegramOptIn,
       };
-      const { error } = await (supabase as any).from("model_onboarding_drafts").upsert({
-        user_id: user.id, payload, current_step: step, updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" });
-      setDraftStatus(error ? "error" : "saved");
-      if (error) console.error("Onboarding draft autosave failed:", error);
+      try {
+        const { error } = await (supabase as any).from("model_onboarding_drafts").upsert({
+          user_id: user.id, payload, current_step: step, updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+        if (!active) return;
+        setDraftStatus(error ? "error" : "saved");
+        if (error) console.error("Onboarding draft autosave failed:", error);
+      } catch (saveFailure) {
+        if (!active) return;
+        console.error("Onboarding draft autosave failed:", saveFailure);
+        setDraftStatus("error");
+      }
     }, 700);
-    return () => window.clearTimeout(timer);
+    return () => { active = false; window.clearTimeout(timer); };
   }, [user, draftHydrated, submitting, form, step, careerChoices, personalGoals,
       portfolioUrl, youtubeUrl, facebookUrl, pinterestUrl, xUrl, linkedinUrl,
       googleUrl, socialReviewConsent, whatsappOptIn, telegramChatId, telegramOptIn, photos]);
@@ -170,28 +184,34 @@ const ModelOnboarding = () => {
     }
     setSubmitting(true);
     try {
-      // Insert model row
-      const insertPayload: any = { user_id: user.id, ...parsed.data, tiktok: parsed.data.tiktok || null };
-      const { data: model, error: modelErr } = await supabase
-        .from("models")
-        .insert(insertPayload)
-        .select()
-        .single();
-      if (modelErr) throw modelErr;
+      // Make submission retry-safe: recover an existing profile if a prior attempt
+      // created it but failed while linking photos or completing downstream work.
+      const { data: existingModel, error: existingModelError } = await supabase
+        .from("models").select("id").eq("user_id", user.id).maybeSingle();
+      if (existingModelError) throw existingModelError;
 
-      // Photos were uploaded to the owner's private storage while selecting them.
-      // Finalization only links those durable objects to the newly-created model profile.
-      const uploaded = photos.map((photo, position) => ({ storage_path: photo.storage_path, position }));
+      let modelId = existingModel?.id ?? null;
+      if (!modelId) {
+        const insertPayload: any = { user_id: user.id, ...parsed.data, tiktok: parsed.data.tiktok || null };
+        const { data: createdModel, error: modelErr } = await supabase
+          .from("models").insert(insertPayload).select("id").single();
+        if (modelErr) throw modelErr;
+        modelId = createdModel.id;
+      }
+
+      // Photos are durable private objects; link idempotently so a retry cannot
+      // duplicate an already-linked photo or fail on the unique model/path key.
+      const uploaded = photos.map((photo, position) => ({ storage_path: photo.storage_path, position, model_id: modelId }));
       if (uploaded.length) {
         const { error: photosErr } = await supabase.from("model_photos")
-          .insert(uploaded.map((p) => ({ ...p, model_id: model.id })));
+          .upsert(uploaded, { onConflict: "model_id,storage_path", ignoreDuplicates: true });
         if (photosErr) throw photosErr;
       }
 
       // Trigger AI scoring
       setScoring(true);
       const { error: scoreErr } = await supabase.functions.invoke("score-model", {
-        body: { model_id: model.id },
+        body: { model_id: modelId },
       });
       if (scoreErr) {
         // non-fatal — user can re-trigger from dashboard
@@ -204,7 +224,7 @@ const ModelOnboarding = () => {
         const { error: intelligenceError } = await supabase.functions.invoke("chatb2k-talent-intelligence", {
           body: {
             profile_type: "model",
-            source_id: model.id,
+            source_id: modelId,
             profile: {
               display_name: parsed.data.full_name, email: user.email, phone: parsed.data.phone, bio: parsed.data.bio,
               instagram: parsed.data.instagram, tiktok: parsed.data.tiktok,

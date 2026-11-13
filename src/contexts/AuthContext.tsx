@@ -26,56 +26,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
-    if (error) {
-      setRoles([]);
-      throw error;
-    }
-    setRoles((data ?? []).map((r) => r.role as AppRole));
+    if (error) throw error;
+    return (data ?? []).map((row) => row.role as AppRole);
   };
 
   useEffect(() => {
-    // Set up listener FIRST
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        // Keep protected routes in a loading state until role lookup finishes.
-        setLoading(true);
-        // Defer to avoid deadlock inside Supabase's auth callback.
-        setTimeout(() => {
-          void fetchRoles(sess.user.id)
-            .catch((error) => console.error("Unable to load account roles", error))
-            .finally(() => setLoading(false));
-        }, 0);
-      } else {
+    let active = true;
+    let generation = 0;
+
+    // A monotonically increasing generation prevents a slower role lookup for an
+    // older session from overwriting the state of a newer sign-in/sign-out event.
+    const syncSession = async (nextSession: Session | null) => {
+      const currentGeneration = ++generation;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setLoading(true);
+
+      if (!nextSession?.user) {
         setRoles([]);
-        setLoading(false);
+        if (active && currentGeneration === generation) setLoading(false);
+        return;
       }
+
+      try {
+        const nextRoles = await fetchRoles(nextSession.user.id);
+        if (active && currentGeneration === generation) setRoles(nextRoles);
+      } catch (error) {
+        if (active && currentGeneration === generation) {
+          setRoles([]);
+          console.error("Unable to load account roles", error);
+        }
+      } finally {
+        if (active && currentGeneration === generation) setLoading(false);
+      }
+    };
+
+    // Subscribe before reading the persisted session so auth changes are not missed.
+    // Defer work out of the auth callback to avoid holding Supabase's auth lock.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      window.setTimeout(() => { void syncSession(nextSession); }, 0);
     });
 
     void supabase.auth.getSession()
-      .then(async ({ data: { session: sess } }) => {
-        setSession(sess);
-        setUser(sess?.user ?? null);
-        if (sess?.user) {
-          try {
-            await fetchRoles(sess.user.id);
-          } catch (error) {
-            console.error("Unable to load account roles", error);
-          }
-        } else {
-          setRoles([]);
-        }
-      })
+      .then(({ data: { session: storedSession } }) => syncSession(storedSession))
       .catch((error) => {
+        if (!active) return;
         console.error("Unable to restore authentication session", error);
+        const currentGeneration = ++generation;
         setSession(null);
         setUser(null);
         setRoles([]);
-      })
-      .finally(() => setLoading(false));
+        if (active && currentGeneration === generation) setLoading(false);
+      });
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -83,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshRoles = async () => {
-    if (user) await fetchRoles(user.id);
+    if (user) setRoles(await fetchRoles(user.id));
   };
 
   return (
