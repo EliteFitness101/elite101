@@ -41,7 +41,7 @@ const ModelOnboarding = () => {
     tiktok: "",
     bio: "",
   });
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<{ name: string; storage_path: string; preview_url: string }[]>([]);
   const [careerChoices, setCareerChoices] = useState("");
   const [personalGoals, setPersonalGoals] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
@@ -55,6 +55,75 @@ const ModelOnboarding = () => {
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [telegramChatId, setTelegramChatId] = useState("");
   const [telegramOptIn, setTelegramOptIn] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<"loading" | "saved" | "saving" | "error">("loading");
+
+  // Drafts are private to the authenticated owner; no form data is stored in browser localStorage.
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    (supabase as any).from("model_onboarding_drafts")
+      .select("payload,current_step")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(async ({ data, error }: any) => {
+        if (!active) return;
+        if (error) {
+          console.error("Unable to restore onboarding draft:", error);
+          setDraftStatus("error");
+          return;
+        }
+        if (data?.payload) {
+          const p = data.payload;
+          if (p.form) setForm((current) => ({ ...current, ...p.form }));
+          if (typeof p.careerChoices === "string") setCareerChoices(p.careerChoices);
+          if (typeof p.personalGoals === "string") setPersonalGoals(p.personalGoals);
+          if (typeof p.portfolioUrl === "string") setPortfolioUrl(p.portfolioUrl);
+          if (typeof p.youtubeUrl === "string") setYoutubeUrl(p.youtubeUrl);
+          if (typeof p.facebookUrl === "string") setFacebookUrl(p.facebookUrl);
+          if (typeof p.pinterestUrl === "string") setPinterestUrl(p.pinterestUrl);
+          if (typeof p.xUrl === "string") setXUrl(p.xUrl);
+          if (typeof p.linkedinUrl === "string") setLinkedinUrl(p.linkedinUrl);
+          if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);
+          if (Array.isArray(p.photoPaths)) {
+            const restored = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
+              const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+              return signed?.signedUrl ? { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl } : null;
+            }));
+            if (active) setPhotos(restored.filter(Boolean) as { name: string; storage_path: string; preview_url: string }[]);
+          }
+          setSocialReviewConsent(p.socialReviewConsent === true);
+          setWhatsappOptIn(p.whatsappOptIn === true);
+          if (typeof p.telegramChatId === "string") setTelegramChatId(p.telegramChatId);
+          setTelegramOptIn(p.telegramOptIn === true);
+          if (Number.isInteger(data.current_step)) setStep(data.current_step);
+        }
+        setDraftStatus("saved");
+        setDraftHydrated(true);
+      });
+    return () => { active = false; };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !draftHydrated || submitting) return;
+    setDraftStatus("saving");
+    const timer = window.setTimeout(async () => {
+      const payload = {
+        form, careerChoices, personalGoals, portfolioUrl, youtubeUrl, facebookUrl,
+        pinterestUrl, xUrl, linkedinUrl, googleUrl, socialReviewConsent,
+        photoPaths: photos.map((photo) => photo.storage_path),
+        whatsappOptIn, telegramChatId, telegramOptIn,
+      };
+      const { error } = await (supabase as any).from("model_onboarding_drafts").upsert({
+        user_id: user.id, payload, current_step: step, updated_at: new Date().toISOString(),
+      }, { onConflict: "user_id" });
+      setDraftStatus(error ? "error" : "saved");
+      if (error) console.error("Onboarding draft autosave failed:", error);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [user, draftHydrated, submitting, form, step, careerChoices, personalGoals,
+      portfolioUrl, youtubeUrl, facebookUrl, pinterestUrl, xUrl, linkedinUrl,
+      googleUrl, socialReviewConsent, whatsappOptIn, telegramChatId, telegramOptIn, photos]);
 
   // If already has model profile, go to dashboard
   useEffect(() => {
@@ -66,10 +135,25 @@ const ModelOnboarding = () => {
 
   const update = (k: string, v: string | number) => setForm((f) => ({ ...f, [k]: v }));
 
-  const addPhotos = (files: FileList | null) => {
-    if (!files) return;
+  const addPhotos = async (files: FileList | null) => {
+    if (!files || !user) return;
     const list = Array.from(files).filter((f) => f.type.startsWith("image/")).slice(0, 8 - photos.length);
-    setPhotos((p) => [...p, ...list].slice(0, 8));
+    for (const file of list) {
+      const ext = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const storage_path = `${user.id}/drafts/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("model-photos").upload(storage_path, file, { upsert: false, contentType: file.type });
+      if (error) {
+        toast.error(`Could not save ${file.name}. Please retry that photo.`);
+        continue;
+      }
+      const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+      if (!signed?.signedUrl) {
+        await supabase.storage.from("model-photos").remove([storage_path]);
+        toast.error(`Could not preview ${file.name}. Please retry that photo.`);
+        continue;
+      }
+      setPhotos((current) => [...current, { name: file.name, storage_path, preview_url: signed.signedUrl }].slice(0, 8));
+    }
   };
 
   const onSubmit = async () => {
@@ -95,19 +179,11 @@ const ModelOnboarding = () => {
         .single();
       if (modelErr) throw modelErr;
 
-      // Upload photos
-      const uploaded: { storage_path: string; position: number }[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        const file = photos[i];
-        const ext = file.name.split(".").pop() || "jpg";
-        const path = `${user.id}/${model.id}/${Date.now()}-${i}.${ext}`;
-        const { error: upErr } = await supabase.storage.from("model-photos").upload(path, file);
-        if (upErr) throw upErr;
-        uploaded.push({ storage_path: path, position: i });
-      }
+      // Photos were uploaded to the owner's private storage while selecting them.
+      // Finalization only links those durable objects to the newly-created model profile.
+      const uploaded = photos.map((photo, position) => ({ storage_path: photo.storage_path, position }));
       if (uploaded.length) {
-        const { error: photosErr } = await supabase
-          .from("model_photos")
+        const { error: photosErr } = await supabase.from("model_photos")
           .insert(uploaded.map((p) => ({ ...p, model_id: model.id })));
         if (photosErr) throw photosErr;
       }
@@ -164,6 +240,7 @@ const ModelOnboarding = () => {
         console.error("ChatB2K profile enrichment unavailable:", intelligenceFailure);
         toast.warning("Your model profile is saved. ChatB2K enrichment will retry when its service is available.");
       }
+      await (supabase as any).from("model_onboarding_drafts").delete().eq("user_id", user.id);
       navigate("/dashboard/model");
     } catch (e: any) {
       toast.error(e.message || "Something went wrong");
@@ -180,6 +257,7 @@ const ModelOnboarding = () => {
         <div className="text-center mb-8">
           <div className="text-xs uppercase tracking-[0.3em] text-gold mb-2">Model Application</div>
           <h1 className="font-display text-4xl">Tell us about you</h1>
+          <p className="text-xs text-muted-foreground mt-2" aria-live="polite">{draftStatus === "saving" ? "Saving your progress…" : draftStatus === "saved" ? "Your progress is saved securely" : draftStatus === "error" ? "Autosave unavailable — keep this page open and retry" : "Restoring your saved progress…"}</p>
           <div className="flex justify-center gap-2 mt-6">
             {[1, 2, 3, 4].map((s) => (
               <div
@@ -292,9 +370,9 @@ const ModelOnboarding = () => {
                 <div className="grid grid-cols-4 gap-2">
                   {photos.map((p, i) => (
                     <div key={i} className="relative aspect-square rounded-lg overflow-hidden glass">
-                      <img src={URL.createObjectURL(p)} alt="" className="h-full w-full object-cover" />
+                      <img src={p.preview_url} alt={p.name} className="h-full w-full object-cover" />
                       <button
-                        onClick={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}
+                        onClick={async () => { await supabase.storage.from("model-photos").remove([p.storage_path]); setPhotos((arr) => arr.filter((_, idx) => idx !== i)); }}
                         className="absolute top-1 right-1 bg-background/80 rounded-full p-1"
                       >
                         <X className="h-3 w-3" />
