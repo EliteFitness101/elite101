@@ -43,7 +43,7 @@ const BrandOnboarding = () => {
         if (error) {
           console.error("Unable to restore brand onboarding draft:", error);
           setDraftStatus("error");
-          setDraftHydrated(true);
+          // Keep autosave disabled until the existing draft can be read safely.
           return;
         }
         const p = data?.payload;
@@ -63,7 +63,7 @@ const BrandOnboarding = () => {
         if (!active) return;
         console.error("Brand onboarding draft restore failed:", restoreFailure);
         setDraftStatus("error");
-        setDraftHydrated(true);
+        // Do not autosave defaults over a draft when restoration failed.
       });
     return () => { active = false; };
   }, [user]);
