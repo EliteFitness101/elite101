@@ -71,6 +71,7 @@ const BrandOnboarding = () => {
   useEffect(() => {
     if (!user || !draftHydrated || loading) return;
     let active = true;
+    setDraftStatus("saving");
     const timer = window.setTimeout(async () => {
       const payload = {
         form, careerChoices, personalGoals, portfolioUrl, socialUrls,
