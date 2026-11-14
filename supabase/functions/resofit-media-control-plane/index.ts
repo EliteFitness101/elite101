@@ -46,7 +46,7 @@ async function writeToken() {
   return data.trim();
 }
 async function workerHealth() {
-  const response = await fetch(publicBase + "/health", { signal: AbortSignal.timeout(15000) });
+  const response = await fetch("https://upload.resofit.fit/health", { signal: AbortSignal.timeout(15000) });
   const body = await response.json().catch(() => null);
   return { http_status: response.status, ...(body || {}) };
 }
@@ -72,11 +72,9 @@ async function healthStatus() {
   try {
     const token = await writeToken();
     const worker = await workerHealth();
-    const uploadResponse = await fetch("https://upload.resofit.fit/health", { signal: AbortSignal.timeout(15000) });
-    const uploadWorker = await uploadResponse.json().catch(() => null);
-    const ready = worker.http_status === 200 && worker.ok === true && worker.bucket_binding_ready === true &&
-      uploadResponse.status === 200 && uploadWorker?.bucket_binding_ready === true;
-    return { service: "resofit-media-control-plane", status: ready ? "READY" : "DEGRADED", storage_provider: "cloudflare_r2_worker", bucket: "resofit-cdn", public_base_url: publicBase, r2_write_token_configured: !!token, worker, upload_worker: { http_status: uploadResponse.status, ...(uploadWorker || {}) } };
+    const ready = !!token && worker.http_status === 200 && worker.ok === true &&
+      worker.provider === "cloudflare_r2" && worker.bucket_binding_ready === true;
+    return { service: "resofit-media-control-plane", status: ready ? "READY" : "DEGRADED", storage_provider: "cloudflare_r2_worker", bucket: "resofit-cdn", public_base_url: publicBase, r2_write_token_configured: !!token, worker, upload_worker: worker, media_delivery: "R2 custom domain; object URLs are verified by the rehost and publication flows, not by requesting a synthetic /health object" };
   } catch (error) {
     return { service: "resofit-media-control-plane", status: "DEGRADED", storage_provider: "cloudflare_r2_worker", public_base_url: publicBase, detail: String(error).slice(0, 180) };
   }
