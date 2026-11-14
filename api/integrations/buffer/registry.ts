@@ -24,9 +24,9 @@ async function db(path: string, method = "GET", body?: unknown, prefer?: string)
   if (!response.ok) throw new HttpError(502, "Publishing registry database operation failed.");
   return raw ? JSON.parse(raw) : null;
 }
-function safeKey(value: unknown, name: string) {
+function safeKey(value: unknown, name: string, maxLength = 160) {
   const result = String(value || "").trim();
-  if (!result || result.length > 160 || /[\r\n]/.test(result)) throw new HttpError(400, `A valid ${name} is required.`);
+  if (!result || result.length > maxLength || /[\r\n]/.test(result)) throw new HttpError(400, `A valid ${name} is required.`);
   return result;
 }
 export default async function handler(req: any, res: any) {
