@@ -60,13 +60,16 @@ export default async function handler(req: any, res: any) {
         headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
       });
       const ownerRows = ownerResponse.ok ? await ownerResponse.json() as Array<{ owner_user_id: string }> : [];
-      if (ownerRows[0]?.owner_user_id) {
-        const roleResponse = await fetch(`${url}/rest/v1/user_roles?user_id=eq.${ownerRows[0].owner_user_id}&role=eq.model&select=user_id&limit=1`, {
-          headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
-        });
-        const modelRoles = roleResponse.ok ? await roleResponse.json() as Array<{ user_id: string }> : [];
-        if (modelRoles.length) destination = "/dashboard/model";
+      if (!ownerResponse.ok || !ownerRows[0]?.owner_user_id) {
+        return finishConnection(res, "connection_failed");
       }
+      const roleResponse = await fetch(`${url}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(ownerRows[0].owner_user_id)}&role=in.(model,brand,admin)&select=role&limit=1`, {
+        headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` },
+      });
+      const roles = roleResponse.ok ? await roleResponse.json() as Array<{ role: string }> : [];
+      if (!roles.length) return finishConnection(res, "connection_failed");
+      const role = roles[0].role;
+      destination = role === "model" ? "/dashboard/model" : role === "brand" ? "/dashboard/brand" : "/dashboard/admin";
       await completeBufferOAuthConnection(connectionId, code, connectionSaved.verifier);
       return finishConnection(res, "connected", destination);
     } catch {
