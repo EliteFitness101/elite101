@@ -110,6 +110,19 @@ const ModelOnboarding = () => {
         }
         if (data?.payload) {
           const p = data.payload;
+          let restoredPhotos: { name: string; storage_path: string; preview_url: string }[] = [];
+          if (Array.isArray(p.photoPaths)) {
+            restoredPhotos = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
+              const { data: signed, error: signedUrlError } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+              if (signedUrlError || !signed?.signedUrl) {
+                throw signedUrlError || new Error("A saved portfolio photo could not be restored.");
+              }
+              return { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl };
+            }));
+          }
+          // The account may have changed while signed URLs were being fetched.
+          // Do not hydrate the new account with the previous owner's draft.
+          if (!active) return;
           if (p.form) setForm((current) => ({ ...current, ...p.form }));
           if (typeof p.careerChoices === "string") setCareerChoices(p.careerChoices);
           if (typeof p.personalGoals === "string") setPersonalGoals(p.personalGoals);
@@ -120,16 +133,7 @@ const ModelOnboarding = () => {
           if (typeof p.xUrl === "string") setXUrl(p.xUrl);
           if (typeof p.linkedinUrl === "string") setLinkedinUrl(p.linkedinUrl);
           if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);
-          if (Array.isArray(p.photoPaths)) {
-            const restored = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
-              const { data: signed, error: signedUrlError } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
-              if (signedUrlError || !signed?.signedUrl) {
-                throw signedUrlError || new Error("A saved portfolio photo could not be restored.");
-              }
-              return { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl };
-            }));
-            if (active) setPhotos(restored);
-          }
+          setPhotos(restoredPhotos);
           setSocialReviewConsent(p.socialReviewConsent === true);
           setWhatsappOptIn(p.whatsappOptIn === true);
           if (typeof p.telegramChatId === "string") setTelegramChatId(p.telegramChatId);
