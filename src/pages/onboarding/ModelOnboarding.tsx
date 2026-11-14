@@ -88,10 +88,13 @@ const ModelOnboarding = () => {
           if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);
           if (Array.isArray(p.photoPaths)) {
             const restored = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
-              const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
-              return signed?.signedUrl ? { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl } : null;
+              const { data: signed, error: signedUrlError } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+              if (signedUrlError || !signed?.signedUrl) {
+                throw signedUrlError || new Error("A saved portfolio photo could not be restored.");
+              }
+              return { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl };
             }));
-            if (active) setPhotos(restored.filter(Boolean) as { name: string; storage_path: string; preview_url: string }[]);
+            if (active) setPhotos(restored);
           }
           setSocialReviewConsent(p.socialReviewConsent === true);
           setWhatsappOptIn(p.whatsappOptIn === true);
