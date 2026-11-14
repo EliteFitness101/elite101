@@ -71,7 +71,7 @@ const ModelOnboarding = () => {
         if (error) {
           console.error("Unable to restore onboarding draft:", error);
           setDraftStatus("error");
-          setDraftHydrated(true);
+          // Keep hydration closed after restore failure; autosave must not overwrite an unread draft.
           return;
         }
         if (data?.payload) {
@@ -105,7 +105,7 @@ const ModelOnboarding = () => {
         if (!active) return;
         console.error("Onboarding draft restore failed:", restoreFailure);
         setDraftStatus("error");
-        setDraftHydrated(true);
+        // Keep hydration closed after restore failure; autosave must not overwrite an unread draft.
       });
     return () => { active = false; };
   }, [user]);
