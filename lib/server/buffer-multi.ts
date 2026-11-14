@@ -164,11 +164,22 @@ export async function syncBufferConnection(connectionId: string, ownerUserId: st
     for (const channel of channels) {
       const platform = mapPlatform(channel.service);
       if (!platform || !channel.id) continue;
-      const existingQuery = new URLSearchParams({ channel_id: `eq.${channel.id}`, select: "publishing_enabled", limit: "1" });
-      const existing = await rest(`buffer_channels?${existingQuery.toString()}`);
-      const publishingEnabled = Array.isArray(existing) && existing[0]?.publishing_enabled === true;
+      const existingQuery = new URLSearchParams({
+        channel_id: `eq.${channel.id}`,
+        select: "id,owner_user_id,publishing_enabled",
+        limit: "1",
+      });
+      const existing = await rest(`buffer_channels?${existingQuery.toString()}`) as Array<{
+        id: string; owner_user_id: string; publishing_enabled: boolean;
+      }>;
+      if (existing[0] && existing[0].owner_user_id !== ownerUserId) {
+        // buffer_channels has a global UNIQUE(channel_id) key. Never let an OAuth
+        // sync from a second Elite user overwrite the first user's channel row.
+        throw new HttpError(409, "This Buffer channel is already linked to another Elite workspace.");
+      }
+      const publishingEnabled = existing[0]?.publishing_enabled === true;
       const active = !channel.isDisconnected && !channel.isLocked;
-      await rest("buffer_channels?on_conflict=channel_id", "POST", [{
+      const channelRecord = {
         organization_id: org.id, channel_id: channel.id, platform,
         name: channel.displayName || channel.name || channel.id,
         handle: channel.name || channel.displayName || null,
@@ -178,7 +189,30 @@ export async function syncBufferConnection(connectionId: string, ownerUserId: st
         active, is_verified: true, publishing_enabled: publishingEnabled && active,
         verified_at: new Date().toISOString(), last_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }], "resolution=merge-duplicates,return=minimal");
+      };
+      if (existing[0]) {
+        const updateQuery = new URLSearchParams({
+          channel_id: `eq.${channel.id}`,
+          owner_user_id: `eq.${ownerUserId}`,
+        });
+        await rest(`buffer_channels?${updateQuery.toString()}`, "PATCH", channelRecord, "return=minimal");
+      } else {
+        try {
+          await rest("buffer_channels", "POST", [channelRecord], "return=minimal");
+        } catch (insertError) {
+          // Resolve a concurrent insert without ever changing its owner.
+          const raced = await rest(`buffer_channels?${existingQuery.toString()}`) as Array<{
+            id: string; owner_user_id: string; publishing_enabled: boolean;
+          }>;
+          if (!raced[0] || raced[0].owner_user_id !== ownerUserId) {
+            throw new HttpError(409, "This Buffer channel is already linked to another Elite workspace.");
+          }
+          await rest(`buffer_channels?${new URLSearchParams({
+            channel_id: `eq.${channel.id}`,
+            owner_user_id: `eq.${ownerUserId}`,
+          }).toString()}`, "PATCH", channelRecord, "return=minimal");
+        }
+      }
     }
     synced.push({ organizationId: org.id, name: org.name, channels: channels.length });
   }
