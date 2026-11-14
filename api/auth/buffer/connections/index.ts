@@ -51,7 +51,7 @@ export default async function handler(req: any, res: any) {
       connections: connections.map(({ id, label, account_email, account_name, status, last_verified_at, last_error, connected_at, expires_at }) => ({
         id, label, account_email, account_name,
         status: status === "connected" && (!expires_at || new Date(String(expires_at)).getTime() <= Date.now())
-          ? "needs_reauth"
+          ? "refresh_pending"
           : status,
         last_verified_at, last_error, connected_at, expires_at,
       })),
