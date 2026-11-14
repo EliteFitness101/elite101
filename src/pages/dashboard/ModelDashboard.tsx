@@ -294,7 +294,7 @@ const ModelDashboard = () => {
               <h2 className="font-display text-xl flex items-center gap-2"><Link2 className="h-5 w-5 text-gold" /> ChatB2K Social Publishing</h2>
               <p className="text-sm text-muted-foreground mt-1">Connect your own Buffer account. Your credentials remain isolated from other clients.</p>
             </div>
-            {bufferConnection?.status === "connected" ? <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">Buffer connected</Badge> : <Badge variant="outline">Not connected</Badge>}
+            {bufferConnection?.status === "connected" ? <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">Buffer connected</Badge> : bufferConnection?.status === "refresh_pending" ? <Badge variant="outline">Refreshing connection</Badge> : <Badge variant="outline">Reconnect required</Badge>}
           </div>
           {bufferError && <p role="alert" className="text-sm text-destructive">{bufferError}</p>}
           {bufferLoading ? <p className="text-sm text-muted-foreground">Checking your Buffer connection…</p> : bufferConnection ? (

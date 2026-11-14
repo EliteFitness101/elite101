@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,15 +14,6 @@ const Questionnaire = () => {
   const [submission, setSubmission] = useState<SubmissionState>("idle");
   const [message, setMessage] = useState("");
   const [reference, setReference] = useState("");
-  const [redirectToAgency, setRedirectToAgency] = useState(false);
-
-  useEffect(() => {
-    if (!redirectToAgency) return;
-    const redirectTimer = window.setTimeout(() => {
-      window.location.assign(BIGO_AGENCY_INVITE_URL);
-    }, 1800);
-    return () => window.clearTimeout(redirectTimer);
-  }, [redirectToAgency]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -69,8 +60,7 @@ const Questionnaire = () => {
       }
       setSubmission("success");
       setReference(data.reference || "");
-      setMessage("Your application has been received. We are opening the official BIGO agency invitation so you can accept it.");
-      setRedirectToAgency(true);
+      setMessage("Your application has been received. This does not create an Elite NG login or confirm BIGO agency acceptance. You may now open BIGO’s public agency link and complete any steps BIGO presents.");
       formElement.reset();
     } catch (error) {
       console.error("Elite NG application submission failed", error);
@@ -88,7 +78,7 @@ const Questionnaire = () => {
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">Host application</h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-white/65 sm:text-base">
             Tell us about yourself, your live-streaming experience and your setup. Applicants must be 18 or older.
-            Submitting this form does not guarantee acceptance.
+            Submitting this form does not create an Elite NG login or guarantee BIGO agency acceptance. Keep your application reference for follow-up.
           </p>
         </header>
 
@@ -98,14 +88,14 @@ const Questionnaire = () => {
             {reference && <p className="mt-2 font-semibold">Reference: {reference}</p>}
             {submission === "success" && (
               <div className="mt-4 space-y-2">
-                <p className="text-xs text-white/70">BIGO agency invitation · Tap to accept your invitation and continue with BIGO.</p>
+                <p className="text-xs text-white/70">BIGO public agency link · Open BIGO to begin its agency application or invitation process.</p>
                 <a
                   href={BIGO_AGENCY_INVITE_URL}
                   className="inline-flex w-full items-center justify-center rounded-xl bg-amber-300 px-5 py-3 text-sm font-bold text-black transition hover:bg-amber-200"
                 >
-                  Join BIGO Agency
+                  Open BIGO public agency link
                 </a>
-                <p className="text-xs text-white/55">If you are not redirected automatically, use the button above. Agency contracting is confirmed by BIGO, not by this application form.</p>
+                <p className="text-xs text-white/55">This is a public invitation link, not proof of an applicant-specific invitation or agency acceptance. A click, app installation, account creation or submitted BIGO profile does not establish acceptance. Elite NG must verify agency status in BIGO OSS and retain independent official BIGO confirmation.</p>
               </div>
             )}
           </div>

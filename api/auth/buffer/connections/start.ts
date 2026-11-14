@@ -14,16 +14,16 @@ export default async function handler(req: any, res: any) {
     const owner = await requireUser(req);
     const { url: authUrl, serviceRoleKey: authServiceKey } = supabaseConfig();
     const roleResponse = await fetch(
-      `${authUrl}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(owner.id)}&role=in.(model,admin)&select=role&limit=1`,
+      `${authUrl}/rest/v1/user_roles?user_id=eq.${encodeURIComponent(owner.id)}&role=in.(model,brand,admin)&select=role&limit=1`,
       { headers: { apikey: authServiceKey, authorization: `Bearer ${authServiceKey}` } },
     );
     if (!roleResponse.ok) throw new Error("Could not verify your Elite NG workspace role.");
     const allowedRoles = await roleResponse.json() as Array<{ role: string }>;
     if (!allowedRoles.length) {
-      return res.status(403).json({ error: "Complete your model or agency onboarding before connecting Buffer." });
+      return res.status(403).json({ error: "Complete your Elite onboarding before connecting Buffer." });
     }
     const body = typeof req.body === "string" ? JSON.parse(req.body) : (req.body || {});
-    const label = String(body.label || "My model workspace").trim().slice(0, 80) || "Buffer account";
+    const label = String(body.label || "My Elite workspace").trim().slice(0, 80) || "Buffer account";
     const clientId = requiredEnv("BUFFER_CLIENT_ID");
     requiredEnv("BUFFER_CLIENT_SECRET");
     const redirectUri = validateRedirectUri();
