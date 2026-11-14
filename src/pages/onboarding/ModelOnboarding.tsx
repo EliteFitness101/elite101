@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,14 +57,48 @@ const ModelOnboarding = () => {
   const [telegramOptIn, setTelegramOptIn] = useState(false);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "saved" | "saving" | "error">("loading");
+  // Autosave is enabled only for the account whose draft finished restoring.
+  const draftOwnerRef = useRef<string | null>(null);
 
   // Drafts are private to the authenticated owner; no form data is stored in browser localStorage.
   useEffect(() => {
+    // Close the autosave gate before changing account context. This prevents a
+    // previous account's in-memory form from being persisted under a new user.
+    draftOwnerRef.current = null;
+    setDraftHydrated(false);
+    setDraftStatus("loading");
+    setStep(1);
+    setForm({
+      full_name: "",
+      age: "" as string | number,
+      gender: "",
+      phone: "",
+      city: "Lagos",
+      state: "Lagos",
+      instagram: "",
+      tiktok: "",
+      bio: "",
+    });
+    setPhotos([]);
+    setCareerChoices("");
+    setPersonalGoals("");
+    setPortfolioUrl("");
+    setYoutubeUrl("");
+    setFacebookUrl("");
+    setPinterestUrl("");
+    setXUrl("");
+    setLinkedinUrl("");
+    setGoogleUrl("");
+    setSocialReviewConsent(false);
+    setWhatsappOptIn(false);
+    setTelegramChatId("");
+    setTelegramOptIn(false);
     if (!user) return;
+    const ownerId = user.id;
     let active = true;
     (supabase as any).from("model_onboarding_drafts")
       .select("payload,current_step")
-      .eq("user_id", user.id)
+      .eq("user_id", ownerId)
       .maybeSingle()
       .then(async ({ data, error }: any) => {
         if (!active) return;
@@ -102,6 +136,7 @@ const ModelOnboarding = () => {
           setTelegramOptIn(p.telegramOptIn === true);
           if (Number.isInteger(data.current_step)) setStep(data.current_step);
         }
+        draftOwnerRef.current = ownerId;
         setDraftStatus("saved");
         setDraftHydrated(true);
       }).catch((restoreFailure: any) => {
@@ -111,10 +146,10 @@ const ModelOnboarding = () => {
         // Keep hydration closed after restore failure; autosave must not overwrite an unread draft.
       });
     return () => { active = false; };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!user || !draftHydrated || submitting) return;
+    if (!user || draftOwnerRef.current !== user.id || !draftHydrated || submitting) return;
     setDraftStatus("saving");
     let active = true;
     const timer = window.setTimeout(async () => {
