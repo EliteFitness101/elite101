@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,7 @@ const BrandDashboard = () => {
   const [bufferConnecting, setBufferConnecting] = useState(false);
   const [bufferError, setBufferError] = useState("");
 
-  const loadBuffer = async () => {
+  const loadBuffer = useCallback(async () => {
     setBufferLoading(true);
     setBufferError("");
     try {
@@ -40,7 +40,7 @@ const BrandDashboard = () => {
     } finally {
       setBufferLoading(false);
     }
-  };
+  }, []);
 
   const connectBuffer = async () => {
     setBufferConnecting(true);
@@ -70,7 +70,7 @@ const BrandDashboard = () => {
     else if (status) toast.error(`Buffer connection: ${status.replaceAll("_", " ")}`);
     if (status) window.history.replaceState({}, "", window.location.pathname);
     void loadBuffer();
-  }, []);
+  }, [loadBuffer]);
 
   useEffect(() => {
     (async () => {
@@ -120,7 +120,7 @@ const BrandDashboard = () => {
               <p className="text-sm text-muted-foreground mt-1">Connect your own Buffer account. Your channels and credentials remain isolated to this brand workspace.</p>
             </div>
             <Badge variant="outline" className={bufferConnection?.status === "connected" ? "border-emerald-500/40 text-emerald-400" : "border-border"}>
-              {bufferConnection?.status === "connected" ? "Buffer connected" : bufferConnection?.status === "needs_reauth" ? "Reconnect required" : "Not connected"}
+              {bufferConnection?.status === "connected" ? "Buffer connected" : bufferConnection?.status === "needs_reauth" ? "Reconnect required" : bufferConnection?.status === "refresh_pending" ? "Refreshing connection" : "Not connected"}
             </Badge>
           </div>
           {bufferError && <p role="alert" className="text-sm text-destructive">{bufferError}</p>}
