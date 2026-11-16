@@ -42,6 +42,9 @@ const ModelOnboarding = () => {
     bio: "",
   });
   const [photos, setPhotos] = useState<{ name: string; storage_path: string; preview_url: string }[]>([]);
+  // Keep async photo uploads bound to the currently authenticated account.
+  const activeUserIdRef = useRef<string | null>(user?.id ?? null);
+  activeUserIdRef.current = user?.id ?? null;
   const [careerChoices, setCareerChoices] = useState("");
   const [personalGoals, setPersonalGoals] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
@@ -202,13 +205,28 @@ const ModelOnboarding = () => {
         toast.error(`Could not save ${file.name}. Please retry that photo.`);
         continue;
       }
-      const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
-      if (!signed?.signedUrl) {
+      // If the session changed while the upload was in flight, remove the
+      // old owner's unlinked object instead of adding it to the new user's form.
+      if (activeUserIdRef.current !== user.id) {
         await supabase.storage.from("model-photos").remove([storage_path]);
-        toast.error(`Could not preview ${file.name}. Please retry that photo.`);
+        return;
+      }
+      const { data: signed, error: signedUrlError } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+      if (signedUrlError || !signed?.signedUrl) {
+        await supabase.storage.from("model-photos").remove([storage_path]);
+        if (activeUserIdRef.current === user.id) {
+          toast.error(`Could not preview ${file.name}. Please retry that photo.`);
+        }
         continue;
       }
-      setPhotos((current) => [...current, { name: file.name, storage_path, preview_url: signed.signedUrl }].slice(0, 8));
+      if (activeUserIdRef.current !== user.id) {
+        await supabase.storage.from("model-photos").remove([storage_path]);
+        return;
+      }
+      setPhotos((current) => {
+        if (activeUserIdRef.current !== user.id) return current;
+        return [...current, { name: file.name, storage_path, preview_url: signed.signedUrl }].slice(0, 8);
+      });
     }
   };
 
