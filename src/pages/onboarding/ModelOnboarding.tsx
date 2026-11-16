@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,9 @@ const ModelOnboarding = () => {
     bio: "",
   });
   const [photos, setPhotos] = useState<{ name: string; storage_path: string; preview_url: string }[]>([]);
+  // Keep async photo uploads bound to the currently authenticated account.
+  const activeUserIdRef = useRef<string | null>(user?.id ?? null);
+  activeUserIdRef.current = user?.id ?? null;
   const [careerChoices, setCareerChoices] = useState("");
   const [personalGoals, setPersonalGoals] = useState("");
   const [portfolioUrl, setPortfolioUrl] = useState("");
@@ -57,25 +60,72 @@ const ModelOnboarding = () => {
   const [telegramOptIn, setTelegramOptIn] = useState(false);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"loading" | "saved" | "saving" | "error">("loading");
+  // Autosave is enabled only for the account whose draft finished restoring.
+  const draftOwnerRef = useRef<string | null>(null);
 
   // Drafts are private to the authenticated owner; no form data is stored in browser localStorage.
   useEffect(() => {
+    // Close the autosave gate before changing account context. This prevents a
+    // previous account's in-memory form from being persisted under a new user.
+    draftOwnerRef.current = null;
+    setDraftHydrated(false);
+    setDraftStatus("loading");
+    setStep(1);
+    setForm({
+      full_name: "",
+      age: "" as string | number,
+      gender: "",
+      phone: "",
+      city: "Lagos",
+      state: "Lagos",
+      instagram: "",
+      tiktok: "",
+      bio: "",
+    });
+    setPhotos([]);
+    setCareerChoices("");
+    setPersonalGoals("");
+    setPortfolioUrl("");
+    setYoutubeUrl("");
+    setFacebookUrl("");
+    setPinterestUrl("");
+    setXUrl("");
+    setLinkedinUrl("");
+    setGoogleUrl("");
+    setSocialReviewConsent(false);
+    setWhatsappOptIn(false);
+    setTelegramChatId("");
+    setTelegramOptIn(false);
     if (!user) return;
+    const ownerId = user.id;
     let active = true;
     (supabase as any).from("model_onboarding_drafts")
       .select("payload,current_step")
-      .eq("user_id", user.id)
+      .eq("user_id", ownerId)
       .maybeSingle()
       .then(async ({ data, error }: any) => {
         if (!active) return;
         if (error) {
           console.error("Unable to restore onboarding draft:", error);
           setDraftStatus("error");
-          setDraftHydrated(true);
+          // Keep hydration closed after restore failure; autosave must not overwrite an unread draft.
           return;
         }
         if (data?.payload) {
           const p = data.payload;
+          let restoredPhotos: { name: string; storage_path: string; preview_url: string }[] = [];
+          if (Array.isArray(p.photoPaths)) {
+            restoredPhotos = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
+              const { data: signed, error: signedUrlError } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+              if (signedUrlError || !signed?.signedUrl) {
+                throw signedUrlError || new Error("A saved portfolio photo could not be restored.");
+              }
+              return { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl };
+            }));
+          }
+          // The account may have changed while signed URLs were being fetched.
+          // Do not hydrate the new account with the previous owner's draft.
+          if (!active) return;
           if (p.form) setForm((current) => ({ ...current, ...p.form }));
           if (typeof p.careerChoices === "string") setCareerChoices(p.careerChoices);
           if (typeof p.personalGoals === "string") setPersonalGoals(p.personalGoals);
@@ -86,32 +136,27 @@ const ModelOnboarding = () => {
           if (typeof p.xUrl === "string") setXUrl(p.xUrl);
           if (typeof p.linkedinUrl === "string") setLinkedinUrl(p.linkedinUrl);
           if (typeof p.googleUrl === "string") setGoogleUrl(p.googleUrl);
-          if (Array.isArray(p.photoPaths)) {
-            const restored = await Promise.all(p.photoPaths.map(async (storage_path: string) => {
-              const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
-              return signed?.signedUrl ? { name: storage_path.split("/").pop() || "Portfolio photo", storage_path, preview_url: signed.signedUrl } : null;
-            }));
-            if (active) setPhotos(restored.filter(Boolean) as { name: string; storage_path: string; preview_url: string }[]);
-          }
+          setPhotos(restoredPhotos);
           setSocialReviewConsent(p.socialReviewConsent === true);
           setWhatsappOptIn(p.whatsappOptIn === true);
           if (typeof p.telegramChatId === "string") setTelegramChatId(p.telegramChatId);
           setTelegramOptIn(p.telegramOptIn === true);
           if (Number.isInteger(data.current_step)) setStep(data.current_step);
         }
+        draftOwnerRef.current = ownerId;
         setDraftStatus("saved");
         setDraftHydrated(true);
       }).catch((restoreFailure: any) => {
         if (!active) return;
         console.error("Onboarding draft restore failed:", restoreFailure);
         setDraftStatus("error");
-        setDraftHydrated(true);
+        // Keep hydration closed after restore failure; autosave must not overwrite an unread draft.
       });
     return () => { active = false; };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!user || !draftHydrated || submitting) return;
+    if (!user || draftOwnerRef.current !== user.id || !draftHydrated || submitting) return;
     setDraftStatus("saving");
     let active = true;
     const timer = window.setTimeout(async () => {
@@ -160,13 +205,28 @@ const ModelOnboarding = () => {
         toast.error(`Could not save ${file.name}. Please retry that photo.`);
         continue;
       }
-      const { data: signed } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
-      if (!signed?.signedUrl) {
+      // If the session changed while the upload was in flight, remove the
+      // old owner's unlinked object instead of adding it to the new user's form.
+      if (activeUserIdRef.current !== user.id) {
         await supabase.storage.from("model-photos").remove([storage_path]);
-        toast.error(`Could not preview ${file.name}. Please retry that photo.`);
+        return;
+      }
+      const { data: signed, error: signedUrlError } = await supabase.storage.from("model-photos").createSignedUrl(storage_path, 3600);
+      if (signedUrlError || !signed?.signedUrl) {
+        await supabase.storage.from("model-photos").remove([storage_path]);
+        if (activeUserIdRef.current === user.id) {
+          toast.error(`Could not preview ${file.name}. Please retry that photo.`);
+        }
         continue;
       }
-      setPhotos((current) => [...current, { name: file.name, storage_path, preview_url: signed.signedUrl }].slice(0, 8));
+      if (activeUserIdRef.current !== user.id) {
+        await supabase.storage.from("model-photos").remove([storage_path]);
+        return;
+      }
+      setPhotos((current) => {
+        if (activeUserIdRef.current !== user.id) return current;
+        return [...current, { name: file.name, storage_path, preview_url: signed.signedUrl }].slice(0, 8);
+      });
     }
   };
 
