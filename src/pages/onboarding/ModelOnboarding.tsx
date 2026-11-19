@@ -452,7 +452,23 @@ const ModelOnboarding = () => {
                     <div key={i} className="relative aspect-square rounded-lg overflow-hidden glass">
                       <img src={p.preview_url} alt={p.name} className="h-full w-full object-cover" />
                       <button
-                        onClick={async () => { await supabase.storage.from("model-photos").remove([p.storage_path]); setPhotos((arr) => arr.filter((_, idx) => idx !== i)); }}
+                        type="button"
+                        onClick={async () => {
+                          const ownerId = user?.id;
+                          if (!ownerId || activeUserIdRef.current !== ownerId) return;
+                          if (!p.storage_path.startsWith(`${ownerId}/`)) {
+                            toast.error("This photo does not belong to the active account.");
+                            return;
+                          }
+                          const { error } = await supabase.storage.from("model-photos").remove([p.storage_path]);
+                          if (error) {
+                            console.error("Portfolio photo removal failed:", error);
+                            toast.error(`Could not remove ${p.name}. Please retry.`);
+                            return;
+                          }
+                          if (activeUserIdRef.current !== ownerId) return;
+                          setPhotos((arr) => arr.filter((photo) => photo.storage_path !== p.storage_path));
+                        }}
                         className="absolute top-1 right-1 bg-background/80 rounded-full p-1"
                       >
                         <X className="h-3 w-3" />
