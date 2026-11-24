@@ -139,11 +139,26 @@ function messageFor(profile: any, followup = false) {
 }
 
 async function processPendingOnboarding() {
-  const { data: pending, error } = await db.from("chatb2k_talent_profiles").select("*").eq("onboarding_status", "received").order("created_at").limit(20);
+  // Retry both first-time submissions and previously saved enrichment failures.
+  // Pending profiles are eligible again after six hours; updated_at is used as
+  // a compare-and-swap claim so concurrent cron invocations cannot process the
+  // same pending profile at once.
+  const retryCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const { data: pending, error } = await db.from("chatb2k_talent_profiles").select("*")
+    .or(`onboarding_status.eq.received,and(onboarding_status.eq.enrichment_pending,updated_at.lte.${retryCutoff})`)
+    .order("created_at").limit(20);
   if (error) throw error;
   const results: unknown[] = [];
   for (const candidate of pending || []) {
-    const { data: claim } = await db.from("chatb2k_talent_profiles").update({ onboarding_status: "enrichment_pending" }).eq("id", candidate.id).eq("onboarding_status", "received").select("id").maybeSingle();
+    let claimQuery = db.from("chatb2k_talent_profiles")
+      .update({ onboarding_status: "enrichment_pending", updated_at: new Date().toISOString() })
+      .eq("id", candidate.id)
+      .eq("onboarding_status", candidate.onboarding_status);
+    if (candidate.onboarding_status === "enrichment_pending") {
+      claimQuery = claimQuery.eq("updated_at", candidate.updated_at);
+    }
+    const { data: claim, error: claimError } = await claimQuery.select("id").maybeSingle();
+    if (claimError) throw claimError;
     if (!claim) continue;
     const { user_id: _userId, email: _email, phone: _phone, consent: _consent, source_id: _sourceId, source_table: _sourceTable, ...safeProfile } = candidate;
     let evidence: any = { provider: "not_requested", evidence: [], status: "consent_not_given" };
