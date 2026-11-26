@@ -21,7 +21,7 @@ Deno.serve(async(req:Request)=>{
   if(me||!m)return json({error:"MODEL_NOT_FOUND"},404);
   if(m.user_id!==a.user.id){const {data:admin}=await db.from("user_roles").select("user_id").eq("user_id",a.user.id).eq("role","admin").maybeSingle();if(!admin)return json({error:"MODEL_OWNERSHIP_REQUIRED"},403);}
   const key=await secret("GEMINI_API_KEY");if(!key)return json({error:"SCORING_PROVIDER_NOT_CONFIGURED",provider:"gemini"},503);
-  const modelName=(await secret("GEMINI_MODEL"))||"gemini-2.5-flash";
+  const modelName=(await secret("GEMINI_MODEL"))||"gemini-3.1-flash-lite";
   const photos=(m.model_photos||[]).sort((x:any,y:any)=>x.position-y.position).slice(0,4);const parts:any[]=[];
   for(const p of photos){const {data:d,error:e}=await db.storage.from("model-photos").createSignedUrl(p.storage_path,300);if(!e&&d?.signedUrl){try{parts.push(await image(d.signedUrl));}catch(err){console.warn("photo skipped",String(err));}}}
   let social="";
