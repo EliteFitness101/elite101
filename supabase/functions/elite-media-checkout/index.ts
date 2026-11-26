@@ -94,12 +94,22 @@ Deno.serve(async (req: Request) => {
         if (!planCode) throw new Error("paystack_plan_creation_failed");
       }
     }
+    const attribution = body?.attribution && typeof body.attribution === "object" ? body.attribution : {};
+    const safeAttribution = (key: string, max = 200) => {
+      const value = (attribution as Record<string, unknown>)[key];
+      return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
+    };
     const metadata = {
       checkout_channel: "elite_media_paystack", sku: `ELITE-${slug.toUpperCase()}`,
       product_name: offer.name, offer_slug: slug, billing_interval: offer.interval,
       amount_usd_listed: offer.usd, amount_ngn: amountNgn, fx_rate_ngn_per_usd: fx.rate,
       fx_source_updated_at: fx.updatedAt, paystack_plan_code: planCode, auth_user_id: authUserId,
       customer_name: fullName, phone, canonical_origin: "https://elite.resofit.fit/monetization",
+      session_id: safeAttribution("session_id", 120), anonymous_id: safeAttribution("anonymous_id", 120),
+      rsid: safeAttribution("rsid", 120), funnel_origin: safeAttribution("funnel_origin", 80) ?? "elite_ng",
+      utm_source: safeAttribution("utm_source"), utm_medium: safeAttribution("utm_medium"),
+      utm_campaign: safeAttribution("utm_campaign"), utm_term: safeAttribution("utm_term"),
+      utm_content: safeAttribution("utm_content"),
     };
     const { error: checkoutErr } = await admin.from("elite_media_checkouts").insert({
       reference, auth_user_id: authUserId, email, full_name: fullName, phone,

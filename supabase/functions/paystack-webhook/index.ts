@@ -64,11 +64,15 @@ if(metadata.checkout_channel==="elite_media_paystack"){
 }
 const{error:revenueError}=await admin.from("revenue_events").upsert({payment_reference:reference,amount:receivedKobo/100,currency:"NGN",email,product_slug:subscriber.product_id,rsid:subscriber.rsid,status:"success",campaign:metadata.utm_campaign??metadata.campaign??null,utm:{source:metadata.utm_source??null,medium:metadata.utm_medium??null,campaign:metadata.utm_campaign??null,term:metadata.utm_term??null,content:metadata.utm_content??null}},{onConflict:"payment_reference"});if(revenueError)throw revenueError;
 // Close the existing attribution chain on verified Paystack success.
-const attributionFilter=admin.from("campaign_attribution").update({
-  order_id:reference,
-  revenue_ngn:receivedKobo/100,
-  contribution_margin_ngn:metadata.gross_margin_ngn??null
-}).eq("checkout_id",reference);
+const attributionSessionId=typeof metadata.session_id==="string"&&metadata.session_id.trim()?metadata.session_id.trim():(typeof subscriber.metadata?.session_id==="string"&&subscriber.metadata.session_id.trim()?subscriber.metadata.session_id.trim():null);
+const attributionAnonymousId=typeof metadata.anonymous_id==="string"&&metadata.anonymous_id.trim()?metadata.anonymous_id.trim():(typeof metadata.anonymousId==="string"&&metadata.anonymousId.trim()?metadata.anonymousId.trim():(typeof subscriber.metadata?.anonymous_id==="string"&&subscriber.metadata.anonymous_id.trim()?subscriber.metadata.anonymous_id.trim():null));
+const attributionPatch:any={order_id:reference,revenue_ngn:receivedKobo/100,contribution_margin_ngn:metadata.gross_margin_ngn??null};
+if(attributionSessionId)attributionPatch.session_id=attributionSessionId;
+if(attributionAnonymousId)attributionPatch.anonymous_id=attributionAnonymousId;
+if(subscriber.rsid)attributionPatch.rsid=subscriber.rsid;
+if(typeof metadata.utm_source==="string"&&metadata.utm_source)attributionPatch.utm_source=metadata.utm_source;
+if(typeof metadata.utm_campaign==="string"&&metadata.utm_campaign)attributionPatch.utm_campaign=metadata.utm_campaign;
+const attributionFilter=admin.from("campaign_attribution").update(attributionPatch).eq("checkout_id",reference);
 const {error:attributionUpdateError}=await attributionFilter;
 if(attributionUpdateError)throw attributionUpdateError;
 const {data:existingConversion,error:conversionLookupError}=await admin.from("conversion_events")
@@ -77,8 +81,8 @@ if(conversionLookupError)throw conversionLookupError;
 if(!existingConversion){
   const {error:conversionError}=await admin.from("conversion_events").insert({
     event_name:"purchase",
-    session_id:typeof metadata.session_id==="string"?metadata.session_id:null,
-    anonymous_id:null,
+    session_id:typeof metadata.session_id==="string"&&metadata.session_id.trim()?metadata.session_id.trim():(typeof subscriber.metadata?.session_id==="string"&&subscriber.metadata.session_id.trim()?subscriber.metadata.session_id.trim():null),
+    anonymous_id:typeof metadata.anonymous_id==="string"&&metadata.anonymous_id.trim()?metadata.anonymous_id.trim():(typeof metadata.anonymousId==="string"&&metadata.anonymousId.trim()?metadata.anonymousId.trim():(typeof subscriber.metadata?.anonymous_id==="string"&&subscriber.metadata.anonymous_id.trim()?subscriber.metadata.anonymous_id.trim():null)),
     user_id:subscriber.user_id??null,
     recommendation_id:null,
     product_id:subscriber.product_id,
