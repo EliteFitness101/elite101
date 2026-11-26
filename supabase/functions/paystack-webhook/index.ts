@@ -77,8 +77,8 @@ if(conversionLookupError)throw conversionLookupError;
 if(!existingConversion){
   const {error:conversionError}=await admin.from("conversion_events").insert({
     event_name:"purchase",
-    session_id:typeof metadata.session_id==="string"?metadata.session_id:null,
-    anonymous_id:null,
+    session_id:typeof metadata.session_id==="string"&&metadata.session_id.trim()?metadata.session_id.trim():(typeof subscriber.metadata?.session_id==="string"&&subscriber.metadata.session_id.trim()?subscriber.metadata.session_id.trim():null),
+    anonymous_id:typeof metadata.anonymous_id==="string"&&metadata.anonymous_id.trim()?metadata.anonymous_id.trim():(typeof metadata.anonymousId==="string"&&metadata.anonymousId.trim()?metadata.anonymousId.trim():(typeof subscriber.metadata?.anonymous_id==="string"&&subscriber.metadata.anonymous_id.trim()?subscriber.metadata.anonymous_id.trim():null)),
     user_id:subscriber.user_id??null,
     recommendation_id:null,
     product_id:subscriber.product_id,
