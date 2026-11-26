@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.elite-media-flow-ingest]
 verify_jwt = true
+
+[functions.whatsapp-baileys-dispatch]
+verify_jwt = false
