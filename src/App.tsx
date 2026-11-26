@@ -66,6 +66,7 @@ const App = () => (
       <Sonner theme="dark" />
       <BrowserRouter>
         <AuthProvider>
+          <AttributionCapture />
           <Suspense fallback={<div className="min-h-screen bg-[#08080b] p-8 text-sm text-white/60">Loading Elite NG…</div>}>
           <Routes>
             <Route path="/" element={<Index />} />
