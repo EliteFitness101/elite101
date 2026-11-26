@@ -37,10 +37,13 @@ export function getEliteAttributionContext() {
   if (typeof window === "undefined") return {};
   captureEliteAttribution();
   const stored = readSessionAttribution();
-  const read = (storage: Storage, key: string) => { try { return storage.getItem(key); } catch { return null; } };
+  const read = (kind: "local" | "session", key: string) => {
+    try { return (kind === "local" ? window.localStorage : window.sessionStorage).getItem(key); }
+    catch { return null; }
+  };
   return {
-    anonymous_id: read(localStorage, ANON_KEY),
-    session_id: read(sessionStorage, SESSION_KEY),
+    anonymous_id: read("local", ANON_KEY),
+    session_id: read("session", SESSION_KEY),
     rsid: stored.rsid ?? null,
     utm_source: stored.utm_source ?? null,
     utm_medium: stored.utm_medium ?? null,
