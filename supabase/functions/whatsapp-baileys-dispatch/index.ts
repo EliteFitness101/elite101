@@ -31,7 +31,7 @@ const isSelfReference = (endpoint: string) => {
     const candidate = new URL(endpoint);
     const current = new URL(SUPABASE_URL + "/functions/v1/whatsapp-baileys-dispatch");
     return candidate.origin === current.origin &&
-      candidate.pathname.replace(/\\/+$/, "") === current.pathname.replace(/\\/+$/, "");
+      candidate.pathname.replace(/\/+$/, "") === current.pathname.replace(/\/+$/, "");
   } catch { return false; }
 };
 
