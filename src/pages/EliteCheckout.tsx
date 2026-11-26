@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, LoaderCircle, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
+import { getEliteAttributionContext } from "@/lib/eliteAttribution";
 
 const offers: Record<string, { name: string; usd: number; interval: "once" | "monthly"; description: string }> = {
   "highlight-launch-pack": { name: "Highlight Launch Pack", usd: 49, interval: "once", description: "One-time editing and delivery package." },
@@ -57,7 +58,7 @@ export default function EliteCheckout() {
     setBusy(true);
     try {
       const { data, error: invokeError } = await supabase.functions.invoke("elite-media-checkout", {
-        body: { offer_slug: slug, name: name.trim(), email: email.trim(), phone: phone.trim() },
+        body: { offer_slug: slug, name: name.trim(), email: email.trim(), phone: phone.trim(), attribution: getEliteAttributionContext() },
       });
       if (invokeError || !data?.authorization_url || !data?.reference || !Number.isFinite(Number(data?.amount_ngn))) {
         throw new Error(data?.error || invokeError?.message || "Checkout could not be prepared. Please try again.");
